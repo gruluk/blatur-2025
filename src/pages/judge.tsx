@@ -8,6 +8,7 @@ type Submission = {
   user_id: string;
   achievement_id: string;
   created_at: string;
+  status: string;
   achievements: {
     title: string;
     points: number;
@@ -19,6 +20,7 @@ type Submission = {
 
 export default function JudgePanel() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [judgedSubmissions, setJudgedSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,11 +32,12 @@ export default function JudgePanel() {
           user_id,
           achievement_id,
           created_at,
+          status,
           achievements!inner (
             title,
             points
           )
-        `) // ✅ Ensures `achievements` is a single object, not an array
+        `)
         .eq("status", "pending");
 
       if (error) {
@@ -42,29 +45,51 @@ export default function JudgePanel() {
         return;
       }
 
-      // 🔥 Convert `achievements` to a single object if needed
-      const formattedSubmissions = data.map((submission) => ({
+      // Fetch past judgments (approved/rejected)
+      const { data: judgedData, error: judgedError } = await supabase
+        .from("submissions")
+        .select(`
+          id,
+          user_id,
+          achievement_id,
+          created_at,
+          status,
+          achievements!inner (
+            title,
+            points
+          )
+        `)
+        .neq("status", "pending"); // Get approved/rejected
+
+      if (judgedError) {
+        console.error("❌ Supabase Error (Judged):", judgedError);
+        return;
+      }
+
+      // 🔥 Fetch user details separately
+      const allUserIds = [...new Set([...data.map((s) => s.user_id), ...judgedData.map((s) => s.user_id)])];
+
+      const usersResponse = await fetch("/api/getUserAvatars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: allUserIds }),
+      });
+
+      const users = await usersResponse.json();
+
+      // Merge user data into submissions
+      const submissionsWithUsers = data.map((submission) => ({
         ...submission,
-        achievements: Array.isArray(submission.achievements)
-          ? submission.achievements[0] || { title: "Unknown", points: 0 } // ✅ Fix array issue
-          : submission.achievements, // ✅ Use directly if already an object
+        user: { name: users[submission.user_id] || "Unknown User" },
       }));
 
-      // 🔥 Fetch user details from our API route
-      const submissionsWithUsers = await Promise.all(
-        formattedSubmissions.map(async (submission) => {
-          try {
-            const res = await fetch(`/api/get-user?userId=${submission.user_id}`);
-            const userData = await res.json();
-            return { ...submission, user: userData };
-          } catch (err) {
-            console.error("❌ Error fetching user data:", err);
-            return { ...submission, user: { name: "Unknown User" } };
-          }
-        })
-      );
+      const judgedWithUsers = judgedData.map((submission) => ({
+        ...submission,
+        user: { name: users[submission.user_id] || "Unknown User" },
+      }));
 
       setSubmissions(submissionsWithUsers);
+      setJudgedSubmissions(judgedWithUsers);
       setLoading(false);
     }
 
@@ -74,14 +99,16 @@ export default function JudgePanel() {
   if (loading) return <p className="text-white">Loading submissions...</p>;
 
   return (
-    <div className="min-h-screen text-white p-6 mt-5">
+    <div className="min-h-screen text-white p-6 mt-15">
       <Header />
 
+      {/* 🔥 Pending Submissions */}
+      <h2 className="text-xl font-bold">🕒 Pending Submissions</h2>
       <ul className="mt-6">
         {submissions.map((submission) => (
           <li key={submission.id} className="py-4 border-b">
-            <h2 className="text-lg font-bold">{submission.achievements.title}</h2> {/* ✅ Now shows correct title */}
-            <p className="text-gray-400">🏆 {submission.achievements.points} Points</p> {/* ✅ Now shows correct points */}
+            <h2 className="text-lg font-bold">{submission.achievements.title}</h2>
+            <p className="text-gray-400">🏆 {submission.achievements.points} Points</p>
             <p className="text-gray-300">👤 Submitted by: {submission.user.name}</p>
             <p className="text-sm text-gray-500">
               🕒 {submission.created_at ? new Date(submission.created_at).toLocaleString() : "Unknown Date"}
@@ -90,6 +117,26 @@ export default function JudgePanel() {
             <Link href={`/judge/${submission.id}`}>
               <button className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
                 🔍 Review Submission
+              </button>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      
+      {/* 🔥 Old Judgments */}
+      <h2 className="mt-10 text-xl font-bold">📜 Past Judgments</h2>
+      <ul className="mt-4">
+        {judgedSubmissions.map((submission) => (
+          <li key={submission.id} className="py-4 border-b">
+            <h2 className="text-lg font-bold">{submission.achievements.title}</h2>
+            <p className="text-gray-400">🏆 {submission.achievements.points} Points</p>
+            <p className="text-gray-300">👤 Submitted by: {submission.user.name}</p>
+            <p className={`text-sm font-bold ${submission.status === "approved" ? "text-green-500" : "text-red-500"}`}>
+              {submission.status.toUpperCase()}
+            </p>
+            <Link href={`/judge/${submission.id}`}>
+              <button className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                ✏ Edit Judgment
               </button>
             </Link>
           </li>

@@ -94,8 +94,8 @@ export default function Feed() {
                 </div>
               </div>
 
-              {/* 🔥 Post Content */}
-              <p className={`mt-2 ${item.is_announcement ? "font-semibold text-lg" : ""}`}>
+              {/* 🔥 Post Content (Fixes newlines) */}
+              <p className={`mt-2 ${item.is_announcement ? "font-semibold text-lg" : ""} whitespace-pre-wrap`}>
                 {item.content}
               </p>
 
