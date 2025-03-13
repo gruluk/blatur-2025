@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../supabase";
 import Header from "@/components/Header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Submission = {
   id: string;
@@ -106,7 +107,29 @@ export default function JudgePanel() {
     fetchSubmissions();
   }, []);
 
-  if (loading) return <p className="text-white text-center">Loading submissions...</p>;
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen text-white p-6 mt-15 flex flex-col items-center">
+        <Header />
+        <h1 className="text-3xl font-bold text-center mb-6">⚖️ Dommerhjørnet</h1>
+
+        <div className="mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
+          {/* 🔥 Skeletons for Pending Submissions */}
+          <h2 className="text-2xl font-bold text-center">🕒 Venter på dommer</h2>
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full max-w-[600px] rounded-lg" />
+          ))}
+
+          {/* 🔥 Skeletons for Past Judgments */}
+          <h2 className="mt-10 text-2xl font-bold text-center">📜 Tidligere dommer</h2>
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full max-w-[600px] rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // 🔥 Sort past judgments (latest first)
   const sortedJudgedSubmissions = [...judgedSubmissions].sort(

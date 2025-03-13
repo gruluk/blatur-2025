@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import { supabase } from "../../../supabase"; // ✅ Import Supabase
 import Header from "@/components/Header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type User = {
   id: string;
@@ -113,7 +114,28 @@ export default function UserProfile() {
     fetchUserScores();
   }, [id]);
 
-  if (loading) return <p className="text-center text-white">Loading user...</p>;
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-onlineBlue text-white p-6 flex flex-col items-center">
+        <Header />
+        <div className="max-w-xl mx-auto bg-white text-onlineBlue p-6 rounded-lg shadow-md flex flex-col items-center">
+          <Skeleton className="w-24 h-24 rounded-full mb-4" />
+
+          <Skeleton className="w-40 h-6 rounded-md" />
+
+          <Skeleton className="w-32 h-5 mt-4 rounded-md" />
+
+          <div className="mt-4 w-full space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-md" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   if (!user) return <p className="text-center text-white">User not found</p>;
 
   return (
