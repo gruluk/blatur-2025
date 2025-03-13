@@ -109,7 +109,7 @@ export default function AchievementDetails() {
   return (
     <div className="min-h-screen bg-[#0D5474] text-white p-6">
       <Header />
-      <div className="flex flex-col items-center text-center mt-10">
+      <div className="flex flex-col items-center text-center mt-15">
         {achievement ? (
           <div className="w-full max-w-2xl bg-white text-[#0D5474] p-6 rounded-lg shadow-md">
             {/* 🔥 Only Show Image if Available */}
