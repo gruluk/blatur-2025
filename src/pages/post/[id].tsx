@@ -5,6 +5,9 @@ import Header from "@/components/Header";
 import PostForm from "@/components/PostForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import { fetchUserAvatars } from "@/utils/api";
+import Link from "next/link";
+import Image from "next/image";
 
 type Comment = {
   id: string;
@@ -55,8 +58,8 @@ export default function PostPage() {
   const [loadingPost, setLoadingPost] = useState(true);
   const [loadingComments, setLoadingComments] = useState(true);
   const [userAvatar, setUserAvatar] = useState<string>("");
+  const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
 
-  // Fetch comments
   const fetchComments = useCallback(async () => {
     if (!id) return;
 
@@ -66,12 +69,15 @@ export default function PostPage() {
       .eq("post_id", id)
       .order("created_at", { ascending: true });
 
-    console.log("📨 Fetched comments:", data, error);
-
     if (error) {
       console.error("❌ Error fetching comments:", error);
     } else {
       setComments(data || []);
+
+      // 🔥 Fetch avatars for users in comments
+      const userIds = data.map((comment) => comment.user_id);
+      const avatars = await fetchUserAvatars(userIds);
+      setUserAvatars(avatars); // ✅ Store avatars in state
     }
     setLoadingComments(false);
   }, [id]);
@@ -104,17 +110,26 @@ export default function PostPage() {
           <Skeleton className="h-[120px] w-full rounded-lg" />
         ) : (
           <>
-            {/* 🔥 User Avatar + Name + Timestamp */}
+            {/* 🔥 User Avatar + Clickable Name */}
             <div className="flex items-center space-x-3 mb-3">
-              <img
-                src={userAvatar}
-                alt={post?.username}
-                className="w-10 h-10 rounded-full border border-gray-300"
-              />
+              <div className="w-10 h-10 rounded-full border border-gray-300 cursor-pointer hover:opacity-80 transition overflow-hidden">
+                <Link href={`/user/${post?.user_id}`} passHref>
+                  <Image
+                    src={userAvatar || "/bedkom-logo.png"}
+                    alt={post?.username || "User"}
+                    width={40}
+                    height={40}
+                  />
+                </Link>
+              </div>
               <div>
-                <p className="font-bold">{post?.username}</p>
+                <Link href={`/user/${post?.user_id}`} passHref>
+                  <p className="font-bold hover:underline cursor-pointer">{post?.username || "Unknown User"}</p>
+                </Link>
                 <p className="text-sm text-gray-500">
-                  {formatDistanceToNow(new Date(post?.created_at || ""), { addSuffix: true })}
+                  {post?.created_at
+                    ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
+                    : "Unknown time"}
                 </p>
               </div>
             </div>
@@ -123,7 +138,7 @@ export default function PostPage() {
 
             {/* Display images & videos */}
             {post?.image_urls?.map((url, index) => (
-              <img key={index} src={url} alt="Post" className="rounded-lg max-w-full mt-2" />
+              <Image key={index} src={url} alt="Post Image" width={600} height={400} className="rounded-lg max-w-full mt-2" />
             ))}
             {post?.video_urls?.map((url, index) => (
               <video key={index} controls className="rounded-lg max-w-full mt-2">
@@ -157,15 +172,21 @@ export default function PostPage() {
             ) : (
               comments.map((comment) => (
                 <div key={comment.id} className="p-4 border rounded-lg bg-gray-100">
-                  {/* 🔥 User Avatar + Name + Timestamp for Comments */}
+                  {/* 🔥 User Avatar + Clickable Name */}
                   <div className="flex items-center space-x-3 mb-2">
-                    <img
-                      src="/bedkom-logo.png" // TODO: Fetch avatars for comments later
-                      alt={comment.username}
-                      className="w-8 h-8 rounded-full border border-gray-300"
-                    />
+                    <Link href={`/user/${comment.user_id}`} passHref>
+                      <Image
+                        src={userAvatars[comment.user_id] || "/bedkom-logo.png"} // ✅ Dynamic avatar
+                        alt={comment.username}
+                        width={40}
+                        height={40}
+                        className="w-8 h-8 rounded-full border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                      />
+                    </Link>
                     <div>
-                      <p className="font-bold">{comment.username}</p>
+                      <Link href={`/user/${comment.user_id}`} passHref>
+                        <p className="font-bold hover:underline cursor-pointer">{comment.username}</p>
+                      </Link>
                       <p className="text-sm text-gray-500">
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </p>
@@ -178,7 +199,7 @@ export default function PostPage() {
                   {Array.isArray(comment.image_urls) && comment.image_urls.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       {comment.image_urls.map((url, index) => (
-                        <img key={index} src={url} alt="Comment Image" className="rounded-lg max-w-full" />
+                        <Image key={index} src={url} alt="Comment Image" width={150} height={150} className="rounded-lg max-w-full" />
                       ))}
                     </div>
                   )}
@@ -189,7 +210,6 @@ export default function PostPage() {
                       {comment.video_urls.map((url, index) => (
                         <video key={index} controls className="rounded-lg max-w-full">
                           <source src={url} type="video/mp4" />
-                          Your browser does not support the video tag.
                         </video>
                       ))}
                     </div>
