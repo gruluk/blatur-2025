@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/router";
-import { FaHome, FaTrophy, FaGavel, FaUser } from "react-icons/fa"; // ✅ Import User Icon
+import { FaHome, FaTrophy, FaGavel, FaUser, FaInfoCircle } from "react-icons/fa"; // ✅ Import User Icon, Added FaInfoCircle
 
 export default function Header() {
   const { user, isSignedIn } = useUser();
@@ -11,6 +11,7 @@ export default function Header() {
   const isAchievements = router.pathname === "/submit";
   const isJudgePanel = router.pathname === "/judge";
   const isUserProfile = router.pathname.startsWith("/user"); // ✅ Highlight if viewing user profile
+  const isInfoPage = router.pathname === "/info"; // ✅ Check if viewing info page
 
   // ✅ Check if the user is an admin
   const isAdmin = user?.publicMetadata?.isAdmin === true;
@@ -45,6 +46,16 @@ export default function Header() {
             <FaTrophy size={24} />
           </Link>
         )}
+
+        {/* ℹ️ Info Page Icon */}
+        <Link
+          href="/Info"
+          className={`p-2 rounded-lg ${
+            isInfoPage ? "bg-onlineOrange text-onlineBlue" : "text-white hover:bg-onlineOrange hover:text-onlineBlue"
+          }`}
+        >
+          <FaInfoCircle size={24} />
+        </Link>
 
         {/* ⚖️ Judge Icon (Only for Admins) */}
         {isSignedIn && isAdmin && (
