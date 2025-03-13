@@ -59,33 +59,43 @@ export default function JudgePanel() {
             points
           )
         `)
-        .neq("status", "pending"); // Get approved/rejected
+        .neq("status", "pending");
 
       if (judgedError) {
         console.error("❌ Supabase Error (Judged):", judgedError);
         return;
       }
 
-      // 🔥 Fetch user details separately
+      // 🔥 Fetch Usernames the Same Way as `JudgeReview`
+      async function fetchUserName(userId: string) {
+        try {
+          const res = await fetch(`/api/get-user?userId=${userId}`);
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (err) {
+          console.error("❌ Error fetching user data:", err);
+        }
+        return { name: "Unknown User" }; // Default fallback
+      }
+
+      // Fetch usernames for all users
       const allUserIds = [...new Set([...data.map((s) => s.user_id), ...judgedData.map((s) => s.user_id)])];
 
-      const usersResponse = await fetch("/api/getUserAvatars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIds: allUserIds }),
-      });
-
-      const users = await usersResponse.json();
+      const userMap: Record<string, { name: string }> = {};
+      for (const userId of allUserIds) {
+        userMap[userId] = await fetchUserName(userId);
+      }
 
       // Merge user data into submissions
       const submissionsWithUsers = data.map((submission) => ({
         ...submission,
-        user: { name: users[submission.user_id] || "Unknown User" },
+        user: userMap[submission.user_id] || { name: "Unknown User" },
       }));
 
       const judgedWithUsers = judgedData.map((submission) => ({
         ...submission,
-        user: { name: users[submission.user_id] || "Unknown User" },
+        user: userMap[submission.user_id] || { name: "Unknown User" },
       }));
 
       setSubmissions(submissionsWithUsers);
@@ -96,52 +106,53 @@ export default function JudgePanel() {
     fetchSubmissions();
   }, []);
 
-  if (loading) return <p className="text-white">Loading submissions...</p>;
+  if (loading) return <p className="text-white text-center">Loading submissions...</p>;
+
+  // 🔥 Sort past judgments (latest first)
+  const sortedJudgedSubmissions = [...judgedSubmissions].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   return (
     <div className="min-h-screen text-white p-6 mt-15">
       <Header />
 
-      {/* 🔥 Pending Submissions */}
-      <h2 className="text-xl font-bold">🕒 Pending Submissions</h2>
-      <ul className="mt-6">
-        {submissions.map((submission) => (
-          <li key={submission.id} className="py-4 border-b">
-            <h2 className="text-lg font-bold">{submission.achievements.title}</h2>
-            <p className="text-gray-400">🏆 {submission.achievements.points} Points</p>
-            <p className="text-gray-300">👤 Submitted by: {submission.user.name}</p>
-            <p className="text-sm text-gray-500">
-              🕒 {submission.created_at ? new Date(submission.created_at).toLocaleString() : "Unknown Date"}
-            </p>
+      <h1 className="text-3xl font-bold text-center mb-6">⚖️ Dommerhjørnet</h1>
 
-            <Link href={`/judge/${submission.id}`}>
-              <button className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
-                🔍 Review Submission
-              </button>
-            </Link>
-          </li>
+      <div className="mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
+        {/* 🔥 Pending Submissions */}
+        <h2 className="text-2xl font-bold text-center">🕒 Venter på dommer</h2>
+        {submissions.map((submission) => (
+          <Link className="w-full max-w-[600px]" key={submission.id} href={`/judge/${submission.id}`} passHref>
+            <div className="p-4 rounded-lg shadow-md cursor-pointer w-full mx-auto bg-white text-onlineBlue">
+              <h2 className="text-lg font-bold">{submission.achievements.title}</h2>
+              <p className="text-gray-600">🏆 {submission.achievements.points} Points</p>
+              <p className="text-gray-500">👤 Submitted by: {submission.user.name}</p>
+              <p className="text-xs text-gray-400">
+                🕒 {new Date(submission.created_at).toLocaleString()}
+              </p>
+            </div>
+          </Link>
         ))}
-      </ul>
-      
-      {/* 🔥 Old Judgments */}
-      <h2 className="mt-10 text-xl font-bold">📜 Past Judgments</h2>
-      <ul className="mt-4">
-        {judgedSubmissions.map((submission) => (
-          <li key={submission.id} className="py-4 border-b">
-            <h2 className="text-lg font-bold">{submission.achievements.title}</h2>
-            <p className="text-gray-400">🏆 {submission.achievements.points} Points</p>
-            <p className="text-gray-300">👤 Submitted by: {submission.user.name}</p>
-            <p className={`text-sm font-bold ${submission.status === "approved" ? "text-green-500" : "text-red-500"}`}>
-              {submission.status.toUpperCase()}
-            </p>
-            <Link href={`/judge/${submission.id}`}>
-              <button className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
-                ✏ Edit Judgment
-              </button>
-            </Link>
-          </li>
+
+        {/* 🔥 Past Judgments */}
+        <h2 className="mt-10 text-2xl font-bold text-center">📜 Tidligere dommer</h2>
+        {sortedJudgedSubmissions.map((submission) => (
+          <Link className="w-full max-w-[600px]" key={submission.id} href={`/judge/${submission.id}`} passHref>
+            <div className="p-4 rounded-lg shadow-md cursor-pointer w-full mx-auto bg-white text-onlineBlue">
+              <h2 className="text-lg font-bold">{submission.achievements.title}</h2>
+              <p className="text-gray-600">🏆 {submission.achievements.points} Points</p>
+              <p className="text-gray-500">👤 Submitted by: {submission.user.name}</p>
+              <p className="text-xs text-gray-400">
+                🕒 {new Date(submission.created_at).toLocaleString()}
+              </p>
+              <p className={`text-sm font-bold ${submission.status === "approved" ? "text-green-600" : "text-red-600"}`}>
+                {submission.status.toUpperCase()}
+              </p>
+            </div>
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
