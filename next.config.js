@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["img.clerk.com"],
+    domains: [
+      "eyxczcbnxwxgxlyzdgcz.supabase.co", // ✅ Supabase storage domain
+      "img.clerk.com", // ✅ Clerk profile images
+    ],
   },
 };
 
