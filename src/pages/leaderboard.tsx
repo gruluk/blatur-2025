@@ -45,7 +45,7 @@ export default function Leaderboard() {
           const userScore = scoresData.find((score: { user_id: string }) => score.user_id === user.id);
           return { 
             ...user, 
-            points: userScore?.total_points || 0 // ✅ Default to 0 if no score
+            points: userScore?.total_points || 0
           };
         });
 
@@ -81,7 +81,7 @@ export default function Leaderboard() {
               <p className="font-bold text-lg">
                 {index + 1}. {user.firstName || "Unknown"} {user.lastName || ""}
               </p>
-              <p className="text-sm text-gray-600">🏆 {user.points} Points</p> {/* ✅ Now recognized */}
+              <p className="text-sm text-gray-600">🏆 {user.points} Points</p>
               <p className="text-xs text-gray-500">Click to view profile</p>
             </div>
           ))}
