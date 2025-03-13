@@ -18,7 +18,7 @@ type Submission = {
     title: string;
     points: number;
   };
-  user: {
+  users: {
     name: string;
   };
 };
@@ -43,18 +43,32 @@ export default function JudgePanel() {
 
       const { data: pendingData } = await supabase
         .from("submissions")
-        .select("id, user_id, achievement_id, created_at, status, achievements(title, points)")
+        .select("id, user_id, achievement_id, created_at, status, achievements(title, points), users(name)")
         .eq("status", "pending");
+
+      const formattedPendingData = pendingData?.map(submission => ({
+        ...submission,
+        achievements: submission.achievements[0] || { title: "Unknown", points: 0 }, // 🛠️ Extract first achievement
+        users: submission.users[0] || { name: "Unknown User" }, // 🛠️ Extract first user
+      })) || [];
 
       const { data: judgedData } = await supabase
         .from("submissions")
-        .select("id, user_id, achievement_id, created_at, status, achievements(title, points)")
+        .select("id, user_id, achievement_id, created_at, status, achievements(title, points), users(name)")
         .neq("status", "pending");
+
+      const formattedJudgedData = judgedData?.map(submission => ({
+        ...submission,
+        achievements: submission.achievements[0] || { title: "Unknown", points: 0 },
+        users: submission.users[0] || { name: "Unknown User" },
+      })) || [];
 
       const { data: achievementData } = await supabase.from("achievements").select("*");
 
-      setSubmissions(pendingData || []);
-      setJudgedSubmissions(judgedData?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
+      setSubmissions(formattedPendingData);
+      setJudgedSubmissions(
+        formattedJudgedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      );
       setAchievements(achievementData || []);
 
       setLoading(false);
@@ -94,7 +108,7 @@ export default function JudgePanel() {
             <TabsTrigger value="achievements" className={cn(
               "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-md font-bold transition-all text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=active]:bg-[#F9B759] data-[state=active]:text-[#0D5474] data-[state=active]:shadow"
             )}>
-              🏆 Manage Achievements
+              🏆 Achievements
             </TabsTrigger>
           </div>
         </TabsList>
