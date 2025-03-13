@@ -27,6 +27,7 @@ export default function JudgeReview() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [reason, setReason] = useState("");
+  const [bonusPoints, setBonusPoints] = useState(0); // 🎖️ Extra points input
 
   useEffect(() => {
     async function fetchSubmission() {
@@ -55,10 +56,7 @@ export default function JudgeReview() {
       }
 
       setSubmission({ ...data, user: userData });
-
-      // ✅ Fix: Update the status state
-      setStatus(data.status);  
-
+      setStatus(data.status);
       setLoading(false);
     }
 
@@ -79,7 +77,7 @@ export default function JudgeReview() {
     }
 
     if (status === "approved") {
-      const points = submission.achievements.points;
+      const totalPoints = submission.achievements.points + bonusPoints; // 🎖️ Include bonus
 
       // ✅ Insert into `scores` table
       const { error: scoreError } = await supabase.from("scores").insert([
@@ -87,7 +85,7 @@ export default function JudgeReview() {
           user_id: submission.user_id,
           event_type: "Achievement",
           event_id: submission.achievement_id,
-          points,
+          points: totalPoints,
         },
       ]);
 
@@ -97,12 +95,16 @@ export default function JudgeReview() {
       }
 
       // ✅ Create a feed post announcing the achievement
-      let postContent = `🎉 ${submission.user.name} just earned +${points} points for completing "${submission.achievements.title}"!`;
-      
+      let postContent = `🎉 ${submission.user.name} just earned +${totalPoints} points for completing "${submission.achievements.title}"!`;
+
+      if (bonusPoints > 0) {
+        postContent += ` (Includes +${bonusPoints} bonus points) 🎖️`;
+      }
+
       if (reason) {
         postContent += `\n\n📝 Judge's Comment: "${reason}"`;
       }
-      
+
       const { error: postError } = await supabase.from("posts").insert([
         {
           user_id: submission.user_id,
@@ -119,49 +121,48 @@ export default function JudgeReview() {
         console.error("❌ Error creating feed post:", postError);
         return;
       }
-
     } else if (status === "rejected") {
-        // ✅ Remove the score if it was previously approved
-        const { error: deleteScoreError } = await supabase
-          .from("scores")
-          .delete()
-          .eq("user_id", submission.user_id)
-          .eq("event_id", submission.achievement_id)
-          .eq("event_type", "Achievement");
+      // ✅ Remove the score if it was previously approved
+      const { error: deleteScoreError } = await supabase
+        .from("scores")
+        .delete()
+        .eq("user_id", submission.user_id)
+        .eq("event_id", submission.achievement_id)
+        .eq("event_type", "Achievement");
 
-        if (deleteScoreError) {
-          console.error("❌ Error deleting score:", deleteScoreError);
-          return;
-        }
-
-        // ✅ Improved Formatting for Feed Post
-        let postContent = `❌ ${submission.user.name}'s achievement "${submission.achievements.title}" has been revoked.`;
-
-        if (submission.submission_text) {
-          postContent += `\n\n📝 Submission: "${submission.submission_text}"`; // Include submission text
-        }
-
-        if (reason) {
-          postContent += `\n\n🗒 Judge's Comment: "${reason}"`; // Add Judge's Comment at the bottom
-        }
-
-        const { error: revokePostError } = await supabase.from("posts").insert([
-          {
-            user_id: submission.user_id,
-            username: submission.user.name,
-            content: postContent,
-            image_urls: submission.proof_url ? [submission.proof_url] : [], // Attach proof image if available
-            video_urls: submission.proof_url?.endsWith(".mp4") ? [submission.proof_url] : [],
-            is_announcement: false,
-            event_type: "Achievement Revoked",
-          },
-        ]);
-
-        if (revokePostError) {
-          console.error("❌ Error creating revocation post:", revokePostError);
-          return;
-        }
+      if (deleteScoreError) {
+        console.error("❌ Error deleting score:", deleteScoreError);
+        return;
       }
+
+      // ✅ Improved Formatting for Feed Post
+      let postContent = `❌ ${submission.user.name}'s achievement "${submission.achievements.title}" has been revoked.`;
+
+      if (submission.submission_text) {
+        postContent += `\n\n📝 Submission: "${submission.submission_text}"`;
+      }
+
+      if (reason) {
+        postContent += `\n\n🗒 Judge's Comment: "${reason}"`;
+      }
+
+      const { error: revokePostError } = await supabase.from("posts").insert([
+        {
+          user_id: submission.user_id,
+          username: submission.user.name,
+          content: postContent,
+          image_urls: submission.proof_url ? [submission.proof_url] : [],
+          video_urls: submission.proof_url?.endsWith(".mp4") ? [submission.proof_url] : [],
+          is_announcement: false,
+          event_type: "Achievement Revoked",
+        },
+      ]);
+
+      if (revokePostError) {
+        console.error("❌ Error creating revocation post:", revokePostError);
+        return;
+      }
+    }
 
     alert(`✅ Submission ${status.toUpperCase()}!`);
     router.push("/judge");
@@ -172,22 +173,7 @@ export default function JudgeReview() {
       <div className="min-h-screen text-white p-6 flex flex-col items-center">
         <Header />
         <h1 className="text-3xl font-bold text-center mb-6 mt-15">⚖️ Dommer dømmer</h1>
-
-        <div className="w-full max-w-2xl bg-white text-onlineBlue p-6 rounded-lg shadow-md">
-          <Skeleton className="h-6 w-3/4 mb-4" /> 
-          <Skeleton className="h-4 w-1/2 mb-2" /> 
-          <Skeleton className="h-4 w-2/3 mb-2" /> 
-          <Skeleton className="h-4 w-1/3 mb-4" /> 
-
-          <Skeleton className="h-20 w-full rounded-lg mb-4" /> 
-
-          <Skeleton className="h-48 w-full rounded-lg mb-4" /> 
-
-          <Skeleton className="h-10 w-full mb-4" /> 
-
-          <Skeleton className="h-12 w-full mb-2" /> 
-          <Skeleton className="h-12 w-full" /> 
-        </div>
+        <Skeleton className="h-12 w-1/2 mb-4" />
       </div>
     );
   }
@@ -201,16 +187,11 @@ export default function JudgeReview() {
         <h2 className="text-2xl font-bold">{submission?.achievements.title}</h2>
         <p className="text-gray-600">🏆 {submission?.achievements.points} Points</p>
         <p className="text-gray-500">👤 Submitted by: {submission?.user?.name || "Unknown User"}</p>
-        <p className="text-xs text-gray-400">🕒 {submission?.created_at ? new Date(submission.created_at).toLocaleString() : "Unknown Date"}</p>
 
-        {/* 🔥 Show Submission Content */}
         {submission?.submission_text && (
-          <p className="mt-4 text-gray-700 border p-3 rounded-lg bg-gray-100">
-            📝 {submission.submission_text}
-          </p>
+          <p className="mt-4 text-gray-700 border p-3 rounded-lg bg-gray-100">📝 {submission.submission_text}</p>
         )}
 
-        {/* 🔥 Display media (image/video) */}
         {submission?.proof_url && (
           <div className="mt-4 flex flex-col items-center">
             {submission.proof_url.endsWith(".mp4") ? (
@@ -223,36 +204,28 @@ export default function JudgeReview() {
           </div>
         )}
 
-        {/* 🔥 Status and Judge's Comment */}
-        <p className={`mt-4 text-lg font-bold ${status === "approved" ? "text-green-600" : status === "rejected" ? "text-red-600" : "text-yellow-500"}`}>
+        <p className="mt-4 text-lg font-bold">
           {status ? `Status: ${status.toUpperCase()}` : "⌛ Pending Review"}
         </p>
 
-        <textarea
-          className="w-full p-2 border rounded-lg text-black mt-4"
-          placeholder="Enter reason for approval/rejection..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-
-        {/* 🔥 Action Buttons */}
-        <div className="mt-6 flex flex-col space-y-2">
-          <button
-            onClick={() => updateSubmission("approved", reason)}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white disabled:opacity-50"
-            disabled={status === "approved"}
-          >
-            ✅ Approve
-          </button>
-
-          <button
-            onClick={() => updateSubmission("rejected", reason)}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white disabled:opacity-50"
-            disabled={status === "rejected"}
-          >
-            ❌ Reject
-          </button>
+        {/* 🎖️ Bonus Points Input */}
+        <div className="mt-4 bg-gray-100 p-4 rounded-lg shadow-md">
+          <h3 className="text-lg font-bold text-onlineBlue">🎖️ Give Bonus Points</h3>
+          <input
+            type="number"
+            placeholder="Bonus Points"
+            value={bonusPoints}
+            onChange={(e) => setBonusPoints(Number(e.target.value))}
+            className="mt-2 p-2 border border-gray-300 rounded-lg w-24 text-onlineBlue"
+          />
         </div>
+
+        <button onClick={() => updateSubmission("approved", reason)} className="mt-4 bg-green-600 px-4 py-2 rounded-lg">
+          ✅ Approve
+        </button>
+        <button onClick={() => updateSubmission("rejected", reason)} className="mt-2 bg-red-600 px-4 py-2 rounded-lg">
+          ❌ Reject
+        </button>
       </div>
     </div>
   );
