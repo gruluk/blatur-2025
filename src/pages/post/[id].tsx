@@ -76,10 +76,9 @@ export default function PostPage() {
     } else {
       setComments(data || []);
 
-      // 🔥 Fetch avatars for users in comments
-      const userIds = data.map((comment) => comment.user_id);
+      const userIds = [...new Set(data.map((comment) => comment.user_id))];
       const avatars = await fetchUserAvatars(userIds);
-      setUserAvatars(avatars); // ✅ Store avatars in state
+      setUserAvatars(avatars);
     }
     setLoadingComments(false);
   }, [id]);
@@ -196,7 +195,6 @@ export default function PostPage() {
                         width={40}
                         height={40}
                         className="w-8 h-8 rounded-full border border-gray-300 cursor-pointer hover:opacity-80 transition"
-                        onClick={() => setFullscreenMedia({ url, type: "image" })}
                       />
                     </Link>
                     <div>
