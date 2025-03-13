@@ -220,6 +220,17 @@ export default function JudgeReview() {
           />
         </div>
 
+        {/* 📝 Judge's Comment Input */}
+        <div className="mt-4">
+          <h3 className="text-lg font-bold text-onlineBlue">📝 Dommer kommentar</h3>
+          <textarea
+            className="mt-2 w-full p-3 border border-gray-300 rounded-lg text-onlineBlue h-24 resize-none"
+            placeholder="Enter reason for approval/rejection..."
+            value={reason}
+            onChange={(e) => setReason(e.target.value)} // ✅ This ensures `setReason` is used
+          />
+        </div>
+
         <button onClick={() => updateSubmission("approved", reason)} className="mt-4 bg-green-600 px-4 py-2 rounded-lg">
           ✅ Approve
         </button>
