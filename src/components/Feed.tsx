@@ -53,7 +53,7 @@ export default function Feed() {
       console.log("📊 Fetched feed with comment counts:", data);
       setFeed(data);
 
-      // Fetch avatars for users
+      // 🔥 Fetch avatars for users
       const userIds = data.map((post) => post.user_id);
       const avatars = await fetchUserAvatars(userIds);
       setUserAvatars(avatars);
