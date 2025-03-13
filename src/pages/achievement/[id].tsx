@@ -19,7 +19,11 @@ export default function AchievementDetails() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
-  const [submissionText, setSubmissionText] = useState(""); // 🔥 New state for text input
+  const [submissionText, setSubmissionText] = useState("");
+  const [latestSubmission, setLatestSubmission] = useState<{
+    proof_url?: string | null;
+    submission_text?: string | null;
+  } | null>(null);
 
   // 🔥 Fetch achievement details
   useEffect(() => {
@@ -32,17 +36,21 @@ export default function AchievementDetails() {
 
     async function fetchSubmissionStatus() {
       if (!id || !user) return;
+
       const { data, error } = await supabase
         .from("submissions")
-        .select("status")
+        .select("status, proof_url, submission_text") // ✅ Fetch all relevant fields
         .eq("achievement_id", id)
         .eq("user_id", user.id)
-        .single();
+        .order("created_at", { ascending: false }) // ✅ Get the latest submission
+        .limit(1)
+        .single(); // ✅ Ensure we get only one submission
 
       if (error && error.code !== "PGRST116") {
         console.error("❌ Error fetching submission status:", error);
       } else {
-        setSubmissionStatus(data?.status || null);
+        setSubmissionStatus(data?.status === "rejected" ? null : data?.status || null);
+        setLatestSubmission(data || null); // ✅ Store latest submission details
       }
     }
 
@@ -52,11 +60,11 @@ export default function AchievementDetails() {
 
   // 🔥 Handle File Upload & Submission
   async function handleUpload() {
-    if (!user || !achievement || submissionStatus) return;
+    if (!user || !achievement) return; // ✅ Ensure user and achievement exist
     setUploading(true);
 
     let publicUrl = null;
-    
+
     // ✅ Upload file if selected
     if (file) {
       const fileExt = file.name.split(".").pop();
@@ -78,22 +86,23 @@ export default function AchievementDetails() {
       }
     }
 
-    // ✅ Insert into `submissions` table
+    // ✅ Insert new submission with `"pending"` status
     const { error: insertError } = await supabase.from("submissions").insert([
       {
         user_id: user.id,
         achievement_id: achievement.id,
         proof_url: publicUrl, // File (optional)
         submission_text: submissionText, // 🔥 Store the text input
-        status: "pending",
+        status: "pending", // ✅ Force new submissions to be "pending"
         judge_comment: null,
       },
     ]);
 
-    if (insertError) console.error("❌ Error inserting submission:", insertError);
-    else {
+    if (insertError) {
+      console.error("❌ Error inserting submission:", insertError);
+    } else {
       alert("✅ Submission uploaded! Pending review.");
-      setSubmissionStatus("pending");
+      setSubmissionStatus("pending"); // ✅ Update UI to show pending state
       setFile(null);
       setSubmissionText(""); // 🔥 Reset text input
     }
@@ -116,6 +125,36 @@ export default function AchievementDetails() {
             )}
             {submissionStatus === "pending" && (
               <p className="mt-4 text-yellow-400 font-bold">⌛ Your submission is pending review.</p>
+            )}
+
+            {latestSubmission && (submissionStatus === "pending" || submissionStatus === "approved") && (
+              <div className="mt-6 bg-white text-onlineBlue p-4 rounded-lg shadow-md w-full max-w-[600px] mx-auto">
+                <h3 className="font-bold">
+                  {submissionStatus === "pending" ? "Your Pending Submission" : "Your Approved Submission"}
+                </h3>
+
+                {/* 🔥 Show submission text */}
+                {latestSubmission.submission_text && (
+                  <p className="mt-2">📝 {latestSubmission.submission_text}</p>
+                )}
+
+                {/* 🔥 Centered Proof (Image/Video) */}
+                {latestSubmission.proof_url && (
+                  <div className="mt-4 flex flex-col items-center space-y-2">
+                    {latestSubmission.proof_url.endsWith(".mp4") ? (
+                      <video controls className="rounded-lg max-w-full">
+                        <source src={latestSubmission.proof_url} type="video/mp4" />
+                      </video>
+                    ) : (
+                      <img
+                        src={latestSubmission.proof_url}
+                        alt="Submission"
+                        className="rounded-lg max-w-full"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* 🔥 Text Input for Submission */}
