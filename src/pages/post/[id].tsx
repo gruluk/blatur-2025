@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fetchUserAvatars } from "@/utils/api";
 import Link from "next/link";
 import Image from "next/image";
+import FullscreenMediaViewer from "@/components/FullscreenMediaViewer";
 
 type Comment = {
   id: string;
@@ -59,6 +60,7 @@ export default function PostPage() {
   const [loadingComments, setLoadingComments] = useState(true);
   const [userAvatar, setUserAvatar] = useState<string>("");
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
+  const [fullscreenMedia, setFullscreenMedia] = useState<{ url: string; type: "image" | "video" } | null>(null);
 
   const fetchComments = useCallback(async () => {
     if (!id) return;
@@ -138,10 +140,23 @@ export default function PostPage() {
 
             {/* Display images & videos */}
             {post?.image_urls?.map((url, index) => (
-              <Image key={index} src={url} alt="Post Image" width={600} height={400} className="rounded-lg max-w-full mt-2" />
+              <Image
+                key={index}
+                src={url}
+                alt="Post Image"
+                width={600}
+                height={400}
+                className="rounded-lg max-w-full mt-2 cursor-pointer"
+                onClick={() => setFullscreenMedia({ url, type: "image" })}
+              />
             ))}
             {post?.video_urls?.map((url, index) => (
-              <video key={index} controls className="rounded-lg max-w-full mt-2">
+              <video
+                key={index}
+                controls
+                className="rounded-lg max-w-full mt-2 cursor-pointer"
+                onClick={() => setFullscreenMedia({ url, type: "video" })} // 🔥 Open in fullscreen
+              >
                 <source src={url} type="video/mp4" />
               </video>
             ))}
@@ -176,11 +191,12 @@ export default function PostPage() {
                   <div className="flex items-center space-x-3 mb-2">
                     <Link href={`/user/${comment.user_id}`} passHref>
                       <Image
-                        src={userAvatars[comment.user_id] || "/bedkom-logo.png"} // ✅ Dynamic avatar
+                        src={userAvatars[comment.user_id] || "/bedkom-logo.png"}
                         alt={comment.username}
                         width={40}
                         height={40}
                         className="w-8 h-8 rounded-full border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                        onClick={() => setFullscreenMedia({ url, type: "image" })}
                       />
                     </Link>
                     <div>
@@ -199,7 +215,15 @@ export default function PostPage() {
                   {Array.isArray(comment.image_urls) && comment.image_urls.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       {comment.image_urls.map((url, index) => (
-                        <Image key={index} src={url} alt="Comment Image" width={150} height={150} className="rounded-lg max-w-full" />
+                        <Image
+                          key={index}
+                          src={url}
+                          alt="Comment Image"
+                          width={150}
+                          height={150}
+                          className="rounded-lg max-w-full mt-2 cursor-pointer"
+                          onClick={() => setFullscreenMedia({ url, type: "image" })} // 🔥 Open in fullscreen
+                        />
                       ))}
                     </div>
                   )}
@@ -208,7 +232,12 @@ export default function PostPage() {
                   {Array.isArray(comment.video_urls) && comment.video_urls.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {comment.video_urls.map((url, index) => (
-                        <video key={index} controls className="rounded-lg max-w-full">
+                        <video
+                          key={index}
+                          controls
+                          className="rounded-lg max-w-full mt-2 cursor-pointer"
+                          onClick={() => setFullscreenMedia({ url, type: "video" })} // 🔥 Open in fullscreen
+                        >
                           <source src={url} type="video/mp4" />
                         </video>
                       ))}
@@ -220,6 +249,7 @@ export default function PostPage() {
           </div>
         )}
       </div>
+      <FullscreenMediaViewer media={fullscreenMedia} onClose={() => setFullscreenMedia(null)} />
     </div>
   );
 }
