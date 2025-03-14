@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "../../supabase";
 import { useAuth } from "@clerk/nextjs";
-import { Check, ChevronsUpDown, Upload } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -30,6 +30,7 @@ export default function BonusPoints() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const { userId } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -49,6 +50,8 @@ export default function BonusPoints() {
   async function handleGrantPoints() {
     if (!selectedUser || !points || !userId) return;
 
+    setIsSubmitting(true);
+
     let proofUrl = null;
 
     // ✅ Upload image if provided
@@ -62,6 +65,7 @@ export default function BonusPoints() {
 
         if (uploadError) {
         console.error("❌ Error uploading image:", uploadError);
+        setIsSubmitting(false)
         return;
         }
 
@@ -69,7 +73,7 @@ export default function BonusPoints() {
         proofUrl = supabase.storage.from("uploads").getPublicUrl(filePath).data.publicUrl;
     }
 
-    // ✅ Insert bonus points into DB
+    // ✅ Insert bonus points into `bonus_points` table
     const { error } = await supabase.from("bonus_points").insert([
         {
         user_id: selectedUser.id,
@@ -83,6 +87,44 @@ export default function BonusPoints() {
 
     if (error) {
         console.error("❌ Error granting bonus points:", error);
+        setIsSubmitting(false)
+        return;
+    }
+
+    // ✅ Fetch user name for the feed post
+    let userName = "Unknown User";
+    try {
+        const res = await fetch(`/api/get-user?userId=${selectedUser.id}`);
+        if (res.ok) {
+        const userData = await res.json();
+        userName = userData.name || "Unknown User";
+        }
+    } catch (err) {
+        console.error("❌ Error fetching user data:", err);
+    }
+
+    // ✅ Create a post announcing the bonus points
+    let postContent = `🎖️ ${userName} just received +${points} bonus points!`;
+
+    if (reason) {
+        postContent += `\n\n📝 Reason: "${reason}"`;
+    }
+
+    const { error: postError } = await supabase.from("posts").insert([
+        {
+        user_id: selectedUser.id,
+        username: userName,
+        content: postContent,
+        image_urls: proofUrl ? [proofUrl] : [],
+        video_urls: [],
+        is_announcement: false,
+        event_type: "Bonus Points",
+        },
+    ]);
+
+    if (postError) {
+        console.error("❌ Error creating feed post:", postError);
+        setIsSubmitting(false)
         return;
     }
 
@@ -92,48 +134,68 @@ export default function BonusPoints() {
     setReason("");
     setImage(null);
     setImagePreview(null);
+    setIsSubmitting(false)
   }
 
   return (
-    <div className="mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
-      <h2 className="text-2xl font-bold text-center">✨ Grant Bonus Points</h2>
+    <div className="bg-white shadow-md rounded-lg p-6 border border-gray-300 max-w-xl w-full mx-auto">
+      <h2 className="text-2xl font-bold text-center text-onlineBlue mb-5">✨ Grant Bonus Points</h2>
 
       {/* 🔥 Select User */}
+      <p className="text-md font-bold text-start text-onlineBlue mb-2">Select a user</p>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-[250px] justify-between">
+          <Button variant="outline" role="combobox" aria-expanded={open} className="w-[250px] justify-between text-black mb-5">
             {selectedUser ? `${selectedUser.firstName || ""} ${selectedUser.lastName || ""}`.trim() : "Select a user..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[250px] p-0">
+        <PopoverContent className="w-[250px] p-0 text-black">
           <Command>
-            <CommandInput placeholder="Search user..." className="h-9" />
+            <CommandInput placeholder="Search user..." />
             <CommandList>
-              <CommandEmpty>No users found.</CommandEmpty>
-              <CommandGroup>
+                <CommandEmpty>No users found.</CommandEmpty>
+                <CommandGroup>
                 {users.map((user) => (
-                  <CommandItem key={user.id} value={user.id} onSelect={() => { setSelectedUser(user); setOpen(false); }}>
+                    <CommandItem
+                    key={user.id}
+                    onSelect={() => {
+                        setSelectedUser(user);
+                        setOpen(false);
+                    }}
+                    >
                     {`${user.firstName || ""} ${user.lastName || ""}`.trim()}
-                    <Check className={`ml-auto ${selectedUser?.id === user.id ? "opacity-100" : "opacity-0"}`} />
-                  </CommandItem>
+                    {selectedUser?.id === user.id && <Check className="ml-auto opacity-100" />}
+                    </CommandItem>
                 ))}
-              </CommandGroup>
+                </CommandGroup>
             </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
 
       {/* 🔥 Input for Points */}
-      <Input type="number" placeholder="Enter bonus points" value={points} onChange={(e) => setPoints(Number(e.target.value))} className="mb-2" />
+      <p className="text-md font-bold text-start text-onlineBlue mb-2">Select points</p>
+      <Input
+        type="number"
+        placeholder="Enter bonus points"
+        value={points}
+        onChange={(e) => setPoints(Number(e.target.value))}
+        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-onlineBlue text-black mb-5"
+        />
 
-      {/* 🔥 Input for Reason */}
-      <Textarea placeholder="Enter reason for bonus points..." value={reason} onChange={(e) => setReason(e.target.value)} className="mb-2" />
+        <p className="text-md font-bold text-start text-onlineBlue mb-2">Describe bonus point</p>
+        <Textarea
+        placeholder="Enter reason for bonus points..."
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-onlineBlue text-black mb-5"
+      />
 
       {/* 🔥 File Upload */}
-      <label className="flex items-center space-x-2 cursor-pointer">
-        <Upload className="h-5 w-5 text-gray-500" />
-        <span className="text-sm">Upload Image (Optional)</span>
+      <p className="text-md font-bold text-start text-onlineBlue mb-2">Upload evidence</p>
+      <label className="w-full flex flex-col items-center px-4 py-3 bg-blue-600 text-white font-bold rounded-lg cursor-pointer hover:bg-blue-700 mt-2">
+        <span className="text-sm">📸 Choose Image/Video</span>
         <input type="file" accept="image/*" className="hidden" onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
@@ -148,9 +210,14 @@ export default function BonusPoints() {
         <img src={imagePreview} alt="Preview" className="mt-2 rounded-lg max-w-[200px] border" />
       )}
 
-      {/* 🔥 Grant Points Button */}
-      <Button onClick={handleGrantPoints} className="w-full bg-green-600 hover:bg-green-700">
-        ✅ Grant Points
+      <Button
+        onClick={handleGrantPoints}
+        disabled={isSubmitting} // ✅ Disable button while submitting
+        className={`w-full text-white font-bold py-2 px-4 rounded-md transition mt-5 ${
+            isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-onlineBlue hover:bg-blue-700"
+        }`}
+        >
+        {isSubmitting ? "Granting..." : "✅ Grant Points"}
       </Button>
     </div>
   );
