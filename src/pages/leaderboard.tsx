@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { supabase } from "../../supabase";
 
 type User = {
   id: string;
@@ -29,27 +30,50 @@ export default function Leaderboard() {
 
         console.log("✅ Fetched users:", usersData);
 
-        // 🔥 Fetch scores from Supabase
-        const scoresRes = await fetch("/api/scores");
-        const scoresData = await scoresRes.json();
+        // 🔥 Fetch achievement scores from Supabase
+        const { data: scoresData, error: scoresError } = await supabase
+          .from("scores")
+          .select("user_id, points");
 
-        if (!Array.isArray(scoresData)) {
-          console.error("❌ scoresData is not an array:", scoresData);
+        if (scoresError) {
+          console.error("❌ Error fetching scores:", scoresError);
           return;
         }
 
         console.log("✅ Fetched scores:", scoresData);
 
-        // 🔥 Merge users with scores
-        const usersWithScores = usersData.map((user) => {
-          const userScore = scoresData.find((score: { user_id: string }) => score.user_id === user.id);
-          return { 
-            ...user, 
-            points: userScore?.total_points || 0
-          };
+        // 🔥 Fetch bonus points from Supabase
+        const { data: bonusData, error: bonusError } = await supabase
+          .from("bonus_points")
+          .select("user_id, points");
+
+        if (bonusError) {
+          console.error("❌ Error fetching bonus points:", bonusError);
+          return;
+        }
+
+        console.log("✅ Fetched bonus points:", bonusData);
+
+        // 🔥 Create a map of user_id -> total points (Achievements + Bonus)
+        const userPointsMap = new Map();
+
+        // ✅ Add Achievement Points
+        scoresData.forEach(({ user_id, points }) => {
+          userPointsMap.set(user_id, (userPointsMap.get(user_id) || 0) + points);
         });
 
-        // 🔥 Sort users by points (highest first)
+        // ✅ Add Bonus Points
+        bonusData.forEach(({ user_id, points }) => {
+          userPointsMap.set(user_id, (userPointsMap.get(user_id) || 0) + points);
+        });
+
+        // 🔥 Merge users with their total points
+        const usersWithScores = usersData.map((user) => ({
+          ...user,
+          points: userPointsMap.get(user.id) || 0, // ✅ Default to 0 if no points
+        }));
+
+        // 🔥 Sort users by total points (highest first)
         usersWithScores.sort((a, b) => b.points - a.points);
 
         setUsers(usersWithScores);
