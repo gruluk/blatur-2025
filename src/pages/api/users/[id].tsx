@@ -11,7 +11,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 🔥 Fetch user from Clerk
     const user = await clerk.users.getUser(id);
     if (!user) return res.status(404).json({ error: "User not found" });
 

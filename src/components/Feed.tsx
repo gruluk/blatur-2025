@@ -44,6 +44,25 @@ export default function Feed() {
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
   const [fullscreenMedia, setFullscreenMedia] = useState<{ url: string; type: "image" | "video" } | null>(null);
 
+  const formatPostContent = (content: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return content.split(urlRegex).map((part, index) =>
+      urlRegex.test(part) ? (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          {part}
+        </a>
+      ) : (
+        part
+      )
+    );
+  };
+
   async function fetchFeed() {
     const { data, error } = await supabase
       .from("posts")
@@ -97,7 +116,7 @@ export default function Feed() {
 
             {/* 🔥 Post Content */}
             <p className={`mt-2 ${item.is_announcement ? "font-semibold text-lg" : ""} whitespace-pre-wrap`}>
-              {item.content}
+              {item.content ? formatPostContent(item.content) : ""}
             </p>
 
             {/* 🔥 Clickable Images */}
