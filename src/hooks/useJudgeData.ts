@@ -81,7 +81,7 @@ export function useJudgeData() {
       }));
 
       // ✅ Format submissions
-      const formatSubmissions = (submissions: any[]) =>
+      const formatSubmissions = (submissions: Submission[]) =>
         submissions.map((submission) => ({
           ...submission,
           users: { name: formattedUsers.find((u) => u.id === submission.user_id)?.fullName || "Unknown User" },

@@ -151,7 +151,7 @@ export default function BonusPoints() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[250px] p-0 text-black">
-          <Command>
+            <Command>
             <CommandInput placeholder="Search user..." />
             <CommandList>
                 <CommandEmpty>No users found.</CommandEmpty>
@@ -170,7 +170,7 @@ export default function BonusPoints() {
                 ))}
                 </CommandGroup>
             </CommandList>
-          </Command>
+            </Command>
         </PopoverContent>
       </Popover>
 
