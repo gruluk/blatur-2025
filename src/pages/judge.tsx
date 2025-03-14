@@ -41,36 +41,63 @@ export default function JudgePanel() {
     async function fetchData() {
       setLoading(true);
 
-      const { data: pendingData } = await supabase
+      // ✅ Fetch pending submissions
+      const { data: pendingData, error: pendingError } = await supabase
         .from("submissions")
-        .select("id, user_id, achievement_id, created_at, status, achievements(title, points), users(name)")
+        .select("*")
         .eq("status", "pending");
 
-      const formattedPendingData = pendingData?.map(submission => ({
-        ...submission,
-        achievements: submission.achievements[0] || { title: "Unknown", points: 0 }, // 🛠️ Extract first achievement
-        users: submission.users[0] || { name: "Unknown User" }, // 🛠️ Extract first user
-      })) || [];
-
-      const { data: judgedData } = await supabase
+      // ✅ Fetch judged submissions
+      const { data: judgedData, error: judgedError } = await supabase
         .from("submissions")
-        .select("id, user_id, achievement_id, created_at, status, achievements(title, points), users(name)")
+        .select("*")
         .neq("status", "pending");
 
-      const formattedJudgedData = judgedData?.map(submission => ({
+      if (pendingError) console.error("❌ Error fetching pending submissions:", pendingError);
+      if (judgedError) console.error("❌ Error fetching judged submissions:", judgedError);
+
+      // ✅ Ensure default empty arrays to avoid `null` errors
+      const pendingSubmissions = pendingData || [];
+      const judgedSubmissions = judgedData || [];
+
+      // ✅ Get unique user IDs
+      const allUserIds = [...new Set([...pendingSubmissions.map((s) => s.user_id), ...judgedSubmissions.map((s) => s.user_id)])];
+      const { data: users, error: usersError } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("id", allUserIds);
+
+      if (usersError) console.error("❌ Error fetching users:", usersError);
+
+      // ✅ Get unique achievement IDs
+      const allAchievementIds = [...new Set([...pendingSubmissions.map((s) => s.achievement_id), ...judgedSubmissions.map((s) => s.achievement_id)])];
+      const { data: achievements, error: achievementsError } = await supabase
+        .from("achievements")
+        .select("id, title, points")
+        .in("id", allAchievementIds);
+
+      if (achievementsError) console.error("❌ Error fetching achievements:", achievementsError);
+
+      const usersMap: Record<string, string> = users?.reduce((acc, user) => ({ ...acc, [user.id]: user.name }), {}) || {};
+      const achievementsMap: Record<string, { title: string; points: number }> =
+        achievements?.reduce((acc, ach) => ({ ...acc, [ach.id]: { title: ach.title, points: ach.points } }), {}) || {};
+
+      const formattedPendingSubmissions = pendingSubmissions.map((submission) => ({
         ...submission,
-        achievements: submission.achievements[0] || { title: "Unknown", points: 0 },
-        users: submission.users[0] || { name: "Unknown User" },
-      })) || [];
+        users: { name: usersMap[submission.user_id] || "Unknown User" },
+        achievements: achievementsMap[submission.achievement_id] || { title: "Unknown", points: 0 },
+      }));
 
-      const { data: achievementData } = await supabase.from("achievements").select("*");
+      const formattedJudgedSubmissions = judgedSubmissions.map((submission) => ({
+        ...submission,
+        users: { name: usersMap[submission.user_id] || "Unknown User" },
+        achievements: achievementsMap[submission.achievement_id] || { title: "Unknown", points: 0 },
+      }));
 
-      setSubmissions(formattedPendingData);
+      setSubmissions(formattedPendingSubmissions);
       setJudgedSubmissions(
-        formattedJudgedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        formattedJudgedSubmissions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       );
-      setAchievements(achievementData || []);
-
       setLoading(false);
     }
 
@@ -96,7 +123,6 @@ export default function JudgePanel() {
       <Header />
       <h1 className="text-3xl font-bold text-center mb-6">⚖️ Dommerhjørnet</h1>
 
-      {/* Centered Styled Tabs */}
       <Tabs defaultValue="judgements" className="w-full max-w-2xl mx-auto">
         <TabsList className="flex justify-center items-center w-full bg-transparent p-2 rounded-lg mb-5">
           <div className="flex w-full max-w-md justify-between">
