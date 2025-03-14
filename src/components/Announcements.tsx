@@ -27,6 +27,32 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
 
+  const formatPostContent = (content: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return content
+      .split("\n")
+      .map((line, i) => (
+        <span key={i}>
+          {line.split(urlRegex).map((part, index) =>
+            urlRegex.test(part) ? (
+              <a
+                key={index}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                {part}
+              </a>
+            ) : (
+              part
+            )
+          )}
+          <br />
+        </span>
+      ));
+  };
+
   async function fetchAnnouncements() {
     const { data, error } = await supabase
       .from("posts")
@@ -78,7 +104,9 @@ export default function Announcements() {
                 </div>
 
                 {/* 🔥 Announcement Content */}
-                <p className="mt-2 font-semibold">{item.content}</p>
+                <p className="mt-2 font-semibold whitespace-pre-wrap">
+                  {item.content ? formatPostContent(item.content) : ""}
+                </p>
 
                 {item.image_urls && item.image_urls.length > 0 && (
                   <div className="mt-2 grid grid-cols-2 gap-2">

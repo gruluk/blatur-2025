@@ -31,6 +31,25 @@ type Post = {
   created_at: string;
 };
 
+const formatPostContent = (content: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return content.split(urlRegex).map((part, index) =>
+    urlRegex.test(part) ? (
+      <a
+        key={index}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+};
+
 // 🔥 Fetch User Avatar from API
 const fetchUserAvatar = async (userId: string) => {
   try {
@@ -106,7 +125,7 @@ export default function PostPage() {
     <div className="bg-onlineBlue text-white p-6 flex flex-col items-center mt-15">
       <Header />
 
-      {/* 🔥 Post Section (Fixed Width & Responsive) */}
+      {/* 🔥 Post Section */}
       <div className="bg-white text-onlineBlue p-4 rounded-lg shadow-md cursor-pointer w-full max-w-[600px] mx-auto mb-5">
         {loadingPost ? (
           <Skeleton className="h-[120px] w-full rounded-lg" />
@@ -134,7 +153,7 @@ export default function PostPage() {
               </div>
             </div>
 
-            <p className="whitespace-pre-wrap">{post?.content}</p>
+            <p className="whitespace-pre-wrap">{post?.content ? formatPostContent(post.content) : ""}</p>
 
             {/* Display images & videos */}
             {post?.image_urls?.map((url, index) => (
