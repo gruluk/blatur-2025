@@ -52,26 +52,34 @@ export default function UserProfile() {
 
     async function fetchUserScores() {
       try {
-        // ✅ Fetch scores (approved achievements)
-        const { data: scores, error: scoresError } = await supabase
-          .from("scores")
-          .select("id, event_type, event_id, points, created_at")
-          .eq("user_id", id)
-          .order("created_at", { ascending: false });
-
-        if (scoresError) throw scoresError;
-
-        // ✅ Fetch all submissions (both approved and rejected)
+        // ✅ Fetch approved submissions first
         const { data: submissions, error: submissionsError } = await supabase
           .from("submissions")
           .select("id, achievement_id, status, proof_url, submission_text, created_at")
           .eq("user_id", id)
+          .eq("status", "approved") // Only approved submissions
           .order("created_at", { ascending: false });
 
         if (submissionsError) throw submissionsError;
 
-        // ✅ Fetch achievement titles
+        // ✅ Extract achievement IDs
         const achievementIds = submissions.map((sub) => sub.achievement_id);
+
+        // ✅ Fetch related scores from `scores` table using achievement IDs
+        const { data: submissionScores, error: scoresError } = await supabase
+          .from("scores")
+          .select("event_id, points")
+          .in("event_id", achievementIds) // ✅ Use achievement IDs, not submission IDs
+          .eq("event_type", "Achievement"); // ✅ Match event_type correctly
+
+        if (scoresError) throw scoresError;
+
+        // ✅ Create a map of event_id -> points
+        const scoreMap = Object.fromEntries(
+          submissionScores.map((score) => [score.event_id, score.points])
+        );
+
+        // ✅ Fetch achievement titles
         const { data: achievements, error: achievementsError } = await supabase
           .from("achievements")
           .select("id, title")
@@ -83,26 +91,51 @@ export default function UserProfile() {
           achievements.map((ach) => [ach.id, ach.title])
         );
 
-        // ✅ Merge scores (approved) and submissions (all statuses)
-        const allEntries = submissions
-          .filter((sub) => sub.status !== "pending") // ✅ Hide pending submissions
-          .map((sub) => {
-            const matchingScore = scores.find((score) => score.event_id === sub.achievement_id);
-            return {
-              id: sub.id,
-              event_type: "Achievement",
-              event_id: sub.achievement_id,
-              points: matchingScore ? matchingScore.points : 0,
-              created_at: sub.created_at,
-              achievement_title: achievementMap[sub.achievement_id] || "Unknown Achievement",
-              proof_url: sub.proof_url,
-              submission_text: sub.submission_text,
-              status: sub.status,
-            };
-          });
+        const { data: bonusPoints, error: bonusPointsError } = await supabase
+          .from("bonus_points")
+          .select("id, points, granted_at, reason, proof_url") // ✅ Include reason & proof_url
+          .eq("user_id", id)
+          .order("granted_at", { ascending: false });
 
+        if (bonusPointsError) throw bonusPointsError;
+
+        // ✅ Format Submissions (Achievements)
+        const formattedSubmissions = submissions.map((sub) => ({
+          id: sub.id,
+          event_type: "Achievement",
+          event_id: sub.achievement_id,
+          points: scoreMap[sub.achievement_id] || 0, // ✅ Fetch points from `scores`
+          created_at: sub.created_at,
+          achievement_title: achievementMap[sub.achievement_id] || "Unknown Achievement",
+          proof_url: sub.proof_url,
+          submission_text: sub.submission_text,
+          status: sub.status,
+        }));
+
+        // ✅ Format Bonus Points to Include Reason & Proof Image
+        const formattedBonusPoints = bonusPoints.map((bonus) => ({
+          id: bonus.id,
+          event_type: "Bonus Points",
+          event_id: "Bonus",
+          points: bonus.points,
+          created_at: bonus.granted_at,
+          achievement_title: "Bonus Points",
+          proof_url: bonus.proof_url || null, // ✅ Ensure proof_url is included
+          submission_text: bonus.reason || null, // ✅ Store reason under submission_text for display
+          status: "approved",
+        }));
+
+        // ✅ Merge Both Lists & Sort by Date
+        const allEntries = [...formattedSubmissions, ...formattedBonusPoints].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        // ✅ Calculate total points correctly
+        const total = allEntries.reduce((sum, entry) => sum + entry.points, 0);
+
+        // ✅ Update State
         setScoreBreakdown(allEntries);
-        setTotalPoints(scores.reduce((sum, entry) => sum + entry.points, 0)); // ✅ Sum approved points only
+        setTotalPoints(total);
       } catch (error) {
         console.error("❌ Error fetching user scores:", error);
       } finally {
@@ -183,10 +216,17 @@ export default function UserProfile() {
                     {new Date(entry.created_at).toLocaleString()}
                   </span>
 
-                  {/* 🔥 Submission Text */}
+                  {/* 🔥 Submission Text (For Achievements) */}
                   {entry.submission_text && (
                     <p className="mt-2 text-gray-700 text-sm border p-2 rounded-lg bg-gray-100">
                       <strong>Submission:</strong> {entry.submission_text}
+                    </p>
+                  )}
+
+                  {/* 🔥 Bonus Point Reason */}
+                  {entry.event_type === "Bonus Points" && entry.reason && (
+                    <p className="mt-2 text-gray-700 text-sm border p-2 rounded-lg bg-gray-100">
+                      <strong>Reason:</strong> {entry.reason}
                     </p>
                   )}
 
@@ -198,7 +238,7 @@ export default function UserProfile() {
                           <source src={entry.proof_url} type="video/mp4" />
                         </video>
                       ) : (
-                        <img src={entry.proof_url} alt="Submission" className="rounded-lg max-w-full" />
+                        <img src={entry.proof_url} alt="Proof" className="rounded-lg max-w-full" />
                       )}
                     </div>
                   )}

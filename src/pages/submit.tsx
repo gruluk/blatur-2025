@@ -49,18 +49,34 @@ export default function Submit() {
 
     async function fetchTotalPoints() {
       if (!user) return;
-      
-      const { data, error } = await supabase
-        .from("scores")
-        .select("points")
-        .eq("user_id", user.id);
 
-      if (error) {
-        console.error("❌ Error fetching total points:", error);
-      } else {
-        // ✅ Sum all points
-        const total = data.reduce((sum, entry) => sum + entry.points, 0);
+      try {
+        // ✅ Fetch Achievement Points from `scores`
+        const { data: scoreData, error: scoreError } = await supabase
+          .from("scores")
+          .select("points")
+          .eq("user_id", user.id);
+
+        if (scoreError) throw scoreError;
+
+        const totalScorePoints = scoreData.reduce((sum, entry) => sum + entry.points, 0);
+
+        // ✅ Fetch Bonus Points from `bonus_points`
+        const { data: bonusData, error: bonusError } = await supabase
+          .from("bonus_points")
+          .select("points")
+          .eq("user_id", user.id);
+
+        if (bonusError) throw bonusError;
+
+        const totalBonusPoints = bonusData.reduce((sum, entry) => sum + entry.points, 0);
+
+        // ✅ Calculate Total (Achievements + Bonus Points)
+        const total = totalScorePoints + totalBonusPoints;
+
         setTotalPoints(total);
+      } catch (error) {
+        console.error("❌ Error fetching total points:", error);
       }
     }
 
@@ -76,7 +92,7 @@ export default function Submit() {
         <h1 className="text-3xl font-bold mb-4">Achievements</h1>
         
         {/* 🔥 Display User’s Total Points */}
-        <p className="text-xl font-bold mb-4">🏆 Total Points: {totalPoints}</p> {/* ✅ Show total score */}
+        <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p> {/* ✅ Show total score */}
 
         {/* 🔥 List of Achievements */}
         <div className="w-full max-w-lg space-y-3">
