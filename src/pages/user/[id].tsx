@@ -4,6 +4,7 @@ import Image from "next/image";
 import { supabase } from "../../../supabase"; // ✅ Import Supabase
 import Header from "@/components/Header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatRelativeTime } from "@/utils/time";
 
 type User = {
   id: string;
@@ -213,7 +214,7 @@ export default function UserProfile() {
                   {/* Display Date */}
                   <br />
                   <span className="text-xs text-gray-400">
-                    {new Date(entry.created_at).toLocaleString()}
+                    {formatRelativeTime(entry.created_at)}
                   </span>
 
                   {/* 🔥 Submission Text (For Achievements) */}
