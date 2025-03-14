@@ -37,14 +37,27 @@ export default function Achievements({ achievements, setAchievements }: Props) {
 
       <div className="w-full space-y-4">
         {achievements.map((achievement) => (
-          <Link key={achievement.id} href={`/judge/achievements/${achievement.id}`} passHref>
-            <div className="p-4 rounded-lg shadow-md bg-white text-onlineBlue w-full cursor-pointer transition hover:bg-gray-100 border border-gray-300 mb-5">
-              <h2 className="text-lg font-bold">{achievement.title}</h2>
-              <p className="text-gray-600">{achievement.description}</p>
-              <p className="text-gray-500">🏆 {achievement.points} Points</p>
-            </div>
-          </Link>
-        ))}
+        <Link key={achievement.id} href={`/judge/achievements/${achievement.id}`} passHref>
+          <div className="p-4 rounded-lg shadow-md bg-white text-onlineBlue w-full cursor-pointer transition hover:bg-gray-100 border border-gray-300 mb-5">
+            <h2 className="text-lg font-bold">{achievement.title}</h2>
+            <p className="text-gray-600">{achievement.description}</p>
+            <p className="text-gray-500">🏆 {achievement.points} Points</p>
+
+            {/* 🔥 Show Achievement Status */}
+            <p
+              className={`mt-2 text-sm font-semibold px-3 py-1 inline-block rounded-md ${
+                achievement.status === "approved"
+                  ? "bg-green-200 text-green-800"
+                  : achievement.status === "pending"
+                  ? "bg-yellow-200 text-yellow-800"
+                  : "bg-red-200 text-red-800"
+              }`}
+            >
+              {achievement.status === "approved" ? "✅ Approved" : achievement.status === "pending" ? "⏳ Pending" : "❌ Rejected"}
+            </p>
+          </div>
+        </Link>
+      ))}
 
         <div className="w-full p-4 bg-white text-onlineBlue rounded-lg shadow-md border border-gray-300">
           <h3 className="text-lg font-bold mb-2">➕ Add New Achievement</h3>

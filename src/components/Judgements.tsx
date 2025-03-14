@@ -27,6 +27,19 @@ export default function Judgements({ loading, submissions, judgedSubmissions }: 
                 <p className="text-sm text-gray-700">👤 {submission.users.name}</p> {/* ✅ Add user name */}
                 <p className="text-gray-600">🏆 {submission.achievements.points} Points</p>
                 <p className="text-xs text-gray-400">🕒 {new Date(submission.created_at).toLocaleString()}</p>
+
+                {/* 🔥 Status Tag */}
+                <p
+                  className={`mt-2 text-sm font-semibold px-3 py-1 inline-block rounded-md ${
+                    submission.status === "approved"
+                      ? "bg-green-200 text-green-800"
+                      : submission.status === "pending"
+                      ? "bg-yellow-200 text-yellow-800"
+                      : "bg-red-200 text-red-800"
+                  }`}
+                >
+                  {submission.status === "approved" ? "✅ Approved" : submission.status === "pending" ? "⏳ Pending" : "❌ Rejected"}
+                </p>
               </div>
             </Link>
           ))}
@@ -39,6 +52,19 @@ export default function Judgements({ loading, submissions, judgedSubmissions }: 
                 <p className="text-sm text-gray-700">👤 {submission.users.name}</p> {/* ✅ Add user name */}
                 <p className="text-gray-600">🏆 {submission.achievements.points} Points</p>
                 <p className="text-xs text-gray-400">🕒 {new Date(submission.created_at).toLocaleString()}</p>
+
+                {/* 🔥 Status Tag */}
+                <p
+                  className={`mt-2 text-sm font-semibold px-3 py-1 inline-block rounded-md ${
+                    submission.status === "approved"
+                      ? "bg-green-200 text-green-800"
+                      : submission.status === "pending"
+                      ? "bg-yellow-200 text-yellow-800"
+                      : "bg-red-200 text-red-800"
+                  }`}
+                >
+                  {submission.status === "approved" ? "✅ Approved" : submission.status === "pending" ? "⏳ Pending" : "❌ Rejected"}
+                </p>
               </div>
             </Link>
           ))}

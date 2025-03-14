@@ -16,6 +16,7 @@ export type Achievement = {
   title: string;
   description: string;
   points: number;
+  status: "pending" | "approved" | "rejected"; // ✅ Add status field
 };
 
 export type User = {
