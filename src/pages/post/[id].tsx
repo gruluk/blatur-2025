@@ -4,7 +4,6 @@ import { supabase } from "../../../supabase";
 import Header from "@/components/Header";
 import PostForm from "@/components/PostForm";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistanceToNow } from "date-fns";
 import { fetchUserAvatars } from "@/utils/api";
 import Link from "next/link";
 import Image from "next/image";

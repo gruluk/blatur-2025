@@ -29,28 +29,22 @@ export default function Announcements() {
 
   const formatPostContent = (content: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return content
-      .split("\n")
-      .map((line, i) => (
-        <span key={i}>
-          {line.split(urlRegex).map((part, index) =>
-            urlRegex.test(part) ? (
-              <a
-                key={index}
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                {part}
-              </a>
-            ) : (
-              part
-            )
-          )}
-          <br />
-        </span>
-      ));
+    return content.split(urlRegex).map((part, index) =>
+      urlRegex.test(part) ? (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline break-words"
+          style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
+        >
+          {part.length > 30 ? `${part.substring(0, 27)}...` : part}
+        </a>
+      ) : (
+        part
+      )
+    );
   };
 
   async function fetchAnnouncements() {

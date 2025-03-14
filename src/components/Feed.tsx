@@ -53,9 +53,10 @@ export default function Feed() {
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:underline"
+          className="text-blue-600 hover:underline break-words"
+          style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
         >
-          {part}
+          {part.length > 30 ? `${part.substring(0, 27)}...` : part}
         </a>
       ) : (
         part
