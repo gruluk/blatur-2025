@@ -138,7 +138,7 @@ export default function BonusPoints() {
   }
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 border border-gray-300 max-w-xl w-full mx-auto">
+    <div className="bg-white shadow-md rounded-lg p-6 border border-gray-300 max-w-xl w-full mx-auto mt-5">
       <h2 className="text-2xl font-bold text-center text-onlineBlue mb-5">✨ Grant Bonus Points</h2>
 
       {/* 🔥 Select User */}
