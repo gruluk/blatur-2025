@@ -224,9 +224,9 @@ export default function UserProfile() {
                   )}
 
                   {/* 🔥 Bonus Point Reason */}
-                  {entry.event_type === "Bonus Points" && entry.reason && (
+                  {entry.event_type === "Bonus Points" && entry.submission_text && (
                     <p className="mt-2 text-gray-700 text-sm border p-2 rounded-lg bg-gray-100">
-                      <strong>Reason:</strong> {entry.reason}
+                      <strong>Reason:</strong> {entry.submission_text}
                     </p>
                   )}
 
