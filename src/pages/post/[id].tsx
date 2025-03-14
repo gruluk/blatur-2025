@@ -9,6 +9,7 @@ import { fetchUserAvatars } from "@/utils/api";
 import Link from "next/link";
 import Image from "next/image";
 import FullscreenMediaViewer from "@/components/FullscreenMediaViewer";
+import { formatRelativeTime } from "@/utils/time";
 
 type Comment = {
   id: string;
@@ -128,9 +129,7 @@ export default function PostPage() {
                   <p className="font-bold hover:underline cursor-pointer">{post?.username || "Unknown User"}</p>
                 </Link>
                 <p className="text-sm text-gray-500">
-                  {post?.created_at
-                    ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
-                    : "Unknown time"}
+                  {post?.created_at ? formatRelativeTime(post.created_at) : "Unknown time"}
                 </p>
               </div>
             </div>
@@ -202,7 +201,7 @@ export default function PostPage() {
                         <p className="font-bold hover:underline cursor-pointer">{comment.username}</p>
                       </Link>
                       <p className="text-sm text-gray-500">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        {formatRelativeTime(comment.created_at)}
                       </p>
                     </div>
                   </div>

@@ -12,8 +12,8 @@ type BonusPointsProps = { users: User[] };
 export default function BonusPoints({ users }: BonusPointsProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number | "">("");
-  const [reason, setReason] = useState<string>(""); // ✅ Added reason input
-  const [image, setImage] = useState<File | null>(null); // ✅ Added image upload
+  const [reason, setReason] = useState<string>(""); 
+  const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { userId } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
