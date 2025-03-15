@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../supabase";
 import PostForm from "./PostForm";
@@ -6,6 +6,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import Link from "next/link";
 import { formatRelativeTime } from "@/utils/time";
 import FullscreenMediaViewer from "@/components/FullscreenMediaViewer";
+import Image from "next/image";
 
 type FeedItem = {
   is_announcement: boolean;
@@ -19,31 +20,20 @@ type FeedItem = {
   comments: { count: number }[];
 };
 
-const fetchUserAvatars = async (userIds: string[]) => {
-  try {
-    const response = await fetch("/api/getUserAvatars", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userIds }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch user avatars");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("❌ Error fetching avatars:", error);
-    return {};
-  }
-};
+const POSTS_PER_PAGE = 10; // ✅ Number of posts per load
 
 export default function Feed() {
   const router = useRouter();
   const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
   const [fullscreenMedia, setFullscreenMedia] = useState<{ url: string; type: "image" | "video" } | null>(null);
+  const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastPostRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ Function to format links inside post content
   const formatPostContent = (content: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return content.split(urlRegex).map((part, index) =>
@@ -64,47 +54,112 @@ export default function Feed() {
     );
   };
 
-  async function fetchFeed() {
-    const { data, error } = await supabase
-      .from("posts")
-      .select("*, comments(count)")
-      .order("created_at", { ascending: false });
+  async function fetchUserAvatars(userIds: string[]) {
+    if (userIds.length === 0) return;
 
-    if (error) console.error("❌ Error fetching feed:", error);
-    else {
-      setFeed(data);
+    try {
+      const response = await fetch("/api/getUserAvatars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds }),
+      });
 
-      const userIds = data.map((post) => post.user_id);
-      const avatars = await fetchUserAvatars(userIds);
-      setUserAvatars(avatars);
+      if (!response.ok) throw new Error("Failed to fetch user avatars");
+
+      const avatars = await response.json();
+      setUserAvatars((prevAvatars) => ({ ...prevAvatars, ...avatars })); // ✅ Update state
+    } catch (error) {
+      console.error("❌ Error fetching avatars:", error);
     }
   }
 
+  // ✅ Function to fetch paginated posts
+  async function fetchFeed(offset = 0, append = false) {
+    if (loading || !hasMore) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*, comments(count)")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + POSTS_PER_PAGE - 1);
+
+    if (error) {
+      console.error("❌ Error fetching feed:", error);
+      setLoading(false);
+      return;
+    }
+
+    if (data.length < POSTS_PER_PAGE) setHasMore(false);
+
+    setFeed((prevFeed) => {
+      const existingIds = new Set(prevFeed.map((post) => post.id));
+      const newUniquePosts = data.filter((post) => !existingIds.has(post.id));
+      return append ? [...prevFeed, ...newUniquePosts] : data;
+    });
+
+    setOffset(offset + POSTS_PER_PAGE);
+
+    // ✅ Fetch user avatars
+    const userIds = [...new Set(data.map((post) => post.user_id))]; // Get unique user IDs
+    fetchUserAvatars(userIds);
+
+    setLoading(false);
+  }
+
+  // ✅ Function to observe last post and load more
   useEffect(() => {
-    fetchFeed();
+    if (observer.current instanceof IntersectionObserver) {
+      observer.current.disconnect();
+    }
+
+    observer.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchFeed(offset, true);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (lastPostRef.current) observer.current.observe(lastPostRef.current);
+
+    return () => {
+      if (observer.current instanceof IntersectionObserver) {
+        observer.current.disconnect();
+      }
+    };
+  }, [feed]);
+
+  // ✅ Initial Fetch
+  useEffect(() => {
+    fetchFeed(0);
   }, []);
 
   return (
     <TabsContent value="feed">
       <div className="mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
-        <PostForm onPostCreated={fetchFeed} />
-        {feed.map((item) => (
+        <PostForm onPostCreated={() => fetchFeed(0)} />
+        {feed.map((item, index) => (
           <div
             key={item.id}
-            className={`p-4 rounded-lg shadow-md w-full max-w-[600px] ${
+            className={`feed-post p-4 rounded-lg shadow-md w-full max-w-[600px] ${
               item.is_announcement
                 ? "bg-yellow-100 border-l-4 border-yellow-500 text-black"
                 : "bg-white text-onlineBlue"
             }`}
-            onClick={() => router.push(`/post/${item.id}`)} // 🔥 Click to navigate
+            ref={index === feed.length - 1 ? lastPostRef : null}
+            onClick={() => router.push(`/post/${item.id}`)}
           >
             {/* 🔥 User Avatar + Name + Timestamp */}
             <div className="flex items-center space-x-3" onClick={(e) => e.stopPropagation()}>
               <Link href={`/user/${item.user_id}`} passHref>
-                <img
+                <Image
                   src={userAvatars[item.user_id] || "/bedkom-logo.png"}
                   alt={item.username}
-                  className="w-10 h-10 rounded-full border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                  width={40} // ✅ Set width
+                  height={40} // ✅ Set height
+                  className="rounded-full border border-gray-300 cursor-pointer hover:opacity-80 transition"
                 />
               </Link>
               <div>
@@ -124,11 +179,13 @@ export default function Feed() {
             {item.image_urls && item.image_urls.length > 0 && (
               <div className="mt-2 flex flex-col items-center space-y-2" onClick={(e) => e.stopPropagation()}>
                 {item.image_urls.map((url, index) => (
-                  <img
+                  <Image
                     key={index}
                     src={url}
                     alt="Post Image"
-                    className="rounded-lg max-w-full cursor-pointer"
+                    width={600} // ✅ Set width
+                    height={400} // ✅ Set height
+                    className="rounded-lg cursor-pointer"
                     onClick={() => setFullscreenMedia({ url, type: "image" })}
                   />
                 ))}
@@ -158,6 +215,9 @@ export default function Feed() {
             </div>
           </div>
         ))}
+
+        {/* 🔄 Loading Indicator */}
+        {loading && <p className="text-gray-500 text-sm">Loading more posts...</p>}
       </div>
 
       {/* 🔥 Fullscreen Media Viewer (Reusable Component) */}

@@ -87,7 +87,7 @@ export default function Announcements() {
                 {/* 🔥 User Avatar + Name + Timestamp */}
                 <div className="flex items-center space-x-3">
                   <img
-                    src={userAvatars[item.user_id] || "/bedkom-logo.png.png"}
+                    src={userAvatars[item.user_id] || "/bedkom-logo.png"}
                     alt={item.username}
                     className="w-10 h-10 rounded-full border border-gray-300"
                   />
