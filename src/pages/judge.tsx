@@ -5,6 +5,7 @@ import { useJudgeData } from "@/hooks/useJudgeData";
 import Judgements from "@/components/Judgements";
 import Achievements from "@/components/Achievements";
 import BonusPoints from "@/components/BonusPoints";
+import EventsJudge from "@/components/EventsJudge";
 
 export default function JudgePanel() {
   const { submissions, judgedSubmissions, achievements, loading, setAchievements, users } = useJudgeData();
@@ -47,6 +48,16 @@ export default function JudgePanel() {
             >
               🎁 Bonus Points
             </TabsTrigger>
+            <TabsTrigger
+              value="events"
+              className={cn(
+                "flex-1 text-center rounded-md px-3 py-2 text-sm md:text-md font-bold transition-all text-white " +
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 " +
+                "data-[state=active]:bg-[#F9B759] data-[state=active]:text-[#0D5474] data-[state=active]:shadow"
+              )}
+            >
+              📅 Events
+            </TabsTrigger>
           </div>
         </TabsList>
 
@@ -63,6 +74,11 @@ export default function JudgePanel() {
         {/* 🎁 Bonus Points Tab */}
         <TabsContent value="bonus">
           <BonusPoints users={users} />
+        </TabsContent>
+
+        {/* 📅 Events Tab */}
+        <TabsContent value="events">
+          <EventsJudge />
         </TabsContent>
       </Tabs>
     </div>

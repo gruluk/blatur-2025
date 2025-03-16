@@ -20,10 +20,21 @@ type FeedItem = {
   comments: { count: number }[];
 };
 
+type Event = {
+  id: string;
+  name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  status: "hidden" | "waiting" | "ongoing" | "done";
+  type: string;
+};
+
 const POSTS_PER_PAGE = 10; // ✅ Number of posts per load
 
 export default function Feed() {
   const router = useRouter();
+  const [events, setEvents] = useState<Event[]>([]);
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [fullscreenMedia, setFullscreenMedia] = useState<{ url: string; type: "image" | "video" } | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
@@ -32,6 +43,26 @@ export default function Feed() {
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef<IntersectionObserver | null>(null);
   const lastPostRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ Fetch ongoing events
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("status", "ongoing") // ✅ Fetch only ongoing events
+        .order("start_date", { ascending: true });
+
+      if (error) {
+        console.error("❌ Error fetching events:", error);
+        return;
+      }
+
+      setEvents(data);
+    }
+
+    fetchEvents();
+  }, []);
 
   // ✅ Function to format links inside post content
   const formatPostContent = (content: string) => {
@@ -139,7 +170,32 @@ export default function Feed() {
   return (
     <TabsContent value="feed">
       <div className="mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
+
+        {/* 🔥 Display Ongoing Events */}
+        {events.length > 0 && (
+          <div className="bg-onlineOrange text-onlineBlue p-4 rounded-lg shadow-md cursor-pointer w-full max-w-[600px] mx-auto">
+            <h2 className="text-xl font-bold text-blue-900 text-center mb-3">🔥 Ongoing Events</h2>
+            <div className="flex flex-col space-y-2">
+              {events.map((event) => (
+                <div
+                  key={event.id}
+                  className="p-4 bg-white border border-gray-300 rounded-md cursor-pointer shadow-md hover:bg-gray-100 transition"
+                  onClick={() => router.push(`/events/${event.type}`)}
+                >
+                  <h3 className="text-lg font-bold text-onlineBlue">{event.name}</h3>
+                  <p className="text-sm text-gray-600">{event.description}</p>
+                  <p className="text-sm text-gray-500">
+                    📅 {new Date(event.start_date).toLocaleDateString()} -{" "}
+                    {new Date(event.end_date).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <PostForm onPostCreated={() => fetchFeed(0)} />
+
         {feed.map((item, index) => (
           <div
             key={item.id}
