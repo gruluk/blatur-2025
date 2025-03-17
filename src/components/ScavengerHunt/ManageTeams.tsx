@@ -24,7 +24,7 @@ export default function ManageTeams({ teams, setTeams, users = [], eventId }) {
 
   return (
     <div className="p-4 rounded-lg border border-gray-300">
-      <h2 className="text-lg font-semibold">Manage Teams</h2>
+      <h2 className="text-lg font-semibold">Create team</h2>
 
       <div className="flex space-x-2 mt-2">
         <input
@@ -41,20 +41,6 @@ export default function ManageTeams({ teams, setTeams, users = [], eventId }) {
           Create
         </button>
       </div>
-
-      <h3 className="text-md font-semibold mt-4">Add Users</h3>
-      <select className="w-full p-2 border border-gray-300 rounded-md">
-        <option value="">-- Select a user --</option>
-        {Array.isArray(users) && users.length > 0 ? (
-          users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.firstName} {user.lastName}
-            </option>
-          ))
-        ) : (
-          <option disabled>No users available</option>
-        )}
-      </select>
     </div>
   );
 }

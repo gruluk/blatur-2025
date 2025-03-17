@@ -1,6 +1,6 @@
 import { GetServerSideProps } from "next";
 import { useState } from "react";
-import { supabase } from "../../../supabase";
+import { supabase } from "../../../../supabase";
 import { useSession } from "@clerk/nextjs";
 import Header from "@/components/Header";
 import NotInTeam from "@/components/ScavengerHunt/NotInTeam";
@@ -102,4 +102,3 @@ export default function ScavengerHuntPage({ event, tasks }) {
     </div>
   );
 }
-

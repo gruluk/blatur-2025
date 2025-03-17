@@ -4,17 +4,17 @@ import Header from "@/components/Header";
 import EventSettings from "@/components/ScavengerHunt/EventSettings";
 import ManageTeams from "@/components/ScavengerHunt/ManageTeams";
 import ManageTasks from "@/components/ScavengerHunt/ManageTasks";
-import TeamList from "@/components/ScavengerHunt/TeamList";
-import TaskList from "@/components/ScavengerHunt/TaskList";
+import TeamList from "@/components/ScavengerHunt/TeamList"; // ✅ Correct usage
 
 export default function JudgeScavengerHuntPage() {
+  const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState(null);
   const [teams, setTeams] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [teamTasks, setTeamTasks] = useState([]);
-  const [users, setUsers] = useState([]); // ✅ Added state for users
+  const [users, setUsers] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     async function fetchEventData() {
@@ -46,49 +46,29 @@ export default function JudgeScavengerHuntPage() {
     }
 
     async function fetchUsers() {
-      const { data: usersData, error } = await fetch("/api/users").then((res) => res.json());
-      if (error) {
+      try {
+        const response = await fetch("/api/users"); // 🔥 Fetch user data from Clerk API
+        const usersData = await response.json();
+
+        if (!Array.isArray(usersData)) {
+          console.error("❌ Error: Invalid user data:", usersData);
+          return;
+        }
+
+        const userMap = usersData.reduce((acc, user) => {
+          acc[user.id] = { firstName: user.firstName, lastName: user.lastName };
+          return acc;
+        }, {});
+
+        setUsers(userMap);
+      } catch (error) {
         console.error("❌ Error fetching users:", error);
-        return;
       }
-      setUsers(usersData);
     }
 
     fetchEventData();
     fetchUsers();
   }, []);
-
-  async function markTaskCompleted(teamId, taskId) {
-    const { error } = await supabase
-      .from("scavenger_hunt_team_tasks")
-      .update({ completed: true })
-      .eq("task_id", taskId)
-      .eq("team_id", teamId);
-
-    if (!error) {
-      setTeamTasks((prev) =>
-        prev.map((t) => (t.task_id === taskId && t.team_id === teamId ? { ...t, completed: true } : t))
-      );
-    }
-  }
-
-  async function reviewTask(teamId, taskId) {
-    const { error } = await supabase
-      .from("scavenger_hunt_team_tasks")
-      .update({ reviewed: true, reviewed_at: new Date() })
-      .eq("task_id", taskId)
-      .eq("team_id", teamId);
-
-    if (!error) {
-      setTeamTasks((prev) =>
-        prev.map((t) =>
-          t.task_id === taskId && t.team_id === teamId
-            ? { ...t, reviewed: true, reviewed_at: new Date().toISOString() }
-            : t
-        )
-      );
-    }
-  }
 
   return (
     <div className="w-full max-w-lg space-y-6 mx-auto mt-20 mb-15 bg-white p-5 rounded-lg shadow-md">
@@ -103,10 +83,20 @@ export default function JudgeScavengerHuntPage() {
           <p className="text-gray-600 text-sm text-center">{event.description}</p>
 
           <EventSettings event={event} setEvent={setEvent} />
-          <ManageTasks tasks={tasks} setTasks={setTasks} teams={teams} eventId={event.id} />
-          <TaskList tasks={tasks} teamTasks={teamTasks} teams={teams} markTaskCompleted={markTaskCompleted} reviewTask={reviewTask} />
-          <ManageTeams teams={teams} setTeams={setTeams} users={users} eventId={event.id} /> {/* ✅ Pass users */}
-          <TeamList teams={teams} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam} />
+          <ManageTasks tasks={tasks} setTasks={setTasks} eventId={event.id} />
+
+          {/* ✅ Correctly Render `TeamList` (Only Once) */}
+          <TeamList
+            teams={teams}
+            setTeams={setTeams}
+            selectedTeam={selectedTeam}
+            setSelectedTeam={setSelectedTeam}
+            users={users}
+            tasks={tasks}
+            teamTasks={teamTasks} // ✅ Pass task statuses for each team
+          />
+
+          <ManageTeams teams={teams} setTeams={setTeams} users={users} eventId={event.id} />
         </>
       )}
     </div>
