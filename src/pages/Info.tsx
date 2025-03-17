@@ -8,13 +8,13 @@ export default function Info() {
 
       <div className="mt-20 pt-5 mb-6 margin-auto">
         <div className="max-w-xl mx-auto p-6 rounded-lg flex flex-col items-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-onlineOrange">
+          <h1 className="text-2xl md:text-3xl font-bold text-onlineOrange mb-5">
             Informasjon
           </h1>
-          <div>Vi bor her</div>
+          <div className='text-xl mb-3'>Vi bor her</div>
           <Image src={'/images/boo.png'} alt="bo" width={500} height={300} />
 
-          <h2 className="text-2xl md:text-3xl font-bold text-onlineOrange">
+          <h2 className="text-2xl md:text-3xl font-bold text-onlineOrange mt-5 mb-5">
             Bo
           </h2>
           <div>Vi bor på to steder, de er rett ved siden av hverandre</div>
@@ -50,10 +50,10 @@ export default function Info() {
           </div>
           <div>{/*Mattis cooker her*/}</div>
 
-          <h2 className="text-2xl md:text-3xl font-bold text-onlineOrange pt-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-onlineOrange pt-6 mb-5">
             Flytur hjem
           </h2>
-          <div>
+          <div className="mb-3">
             Det tar 30min med bolt og 45min med kollektiv, flyet går 11:35
           </div>
           <Image
