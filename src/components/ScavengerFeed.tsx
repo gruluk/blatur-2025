@@ -58,17 +58,22 @@ export default function ScavengerFeed({ teamId }: { teamId: string }) {
             {/* 📸 Images */}
             {item.media_urls && item.media_urls.length > 0 && (
               <div className="mt-2 flex flex-col items-center space-y-2">
-                {item.media_urls.map((url, index) => (
-                  <Image
-                    key={index}
-                    src={url}
-                    alt="Post Image"
-                    width={600}
-                    height={400}
-                    className="rounded-lg cursor-pointer"
-                    onClick={() => setFullscreenMedia({ url, type: "image" })}
-                  />
-                ))}
+                {item.media_urls.map((url, index) => {
+                  const publicUrl = url.startsWith("http") 
+                    ? url 
+                    : supabase.storage.from("scavenger-feed").getPublicUrl(url).data.publicUrl;
+
+                  return (
+                    <Image
+                      key={index}
+                      src={publicUrl}
+                      alt="Post Image"
+                      width={600}
+                      height={400}
+                      className="rounded-lg cursor-pointer"
+                    />
+                  );
+                })}
               </div>
             )}
 

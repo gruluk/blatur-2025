@@ -80,20 +80,67 @@ export default function TeamPage() {
   }, [selectedTeam]);
 
   async function handleJudgeAction(submissionId: string, status: "approved" | "rejected", comment: string) {
-    const { error } = await supabase
-        .from("scavenger_submissions")
-        .update({ status, judge_comment: comment }) // ✅ No more judge_id
-        .eq("id", submissionId);
+    // ✅ Get submission details
+    const { data: submission, error: fetchError } = await supabase
+      .from("scavenger_submissions")
+      .select("task_id, team_id, media_url")
+      .eq("id", submissionId)
+      .single();
 
-    if (error) {
-        console.error("Error updating submission:", error);
-    } else {
-        setSubmissions((prevSubmissions) =>
-        prevSubmissions.map((sub) =>
-            sub.id === submissionId ? { ...sub, status, judge_comment: comment } : sub
-        )
-        );
+    if (fetchError || !submission) {
+      console.error("Error fetching submission:", fetchError);
+      return;
     }
+
+    // ✅ Get the task title
+    const { data: task } = await supabase
+      .from("scavenger_tasks")
+      .select("title")
+      .eq("id", submission.task_id)
+      .single();
+
+    const taskTitle = task?.title || "Unknown Task";
+
+    // ✅ Update submission status
+    const { error: updateError } = await supabase
+      .from("scavenger_submissions")
+      .update({ status, judge_comment: comment })
+      .eq("id", submissionId);
+
+    if (updateError) {
+      console.error("Error updating submission:", updateError);
+      return;
+    }
+
+    // ✅ Generate a system message
+    const systemMessage =
+      status === "approved"
+        ? `✅ Task **"${taskTitle}"** has been **approved**! 🎉`
+        : `❌ Task **"${taskTitle}"** has been **rejected**. ${comment ? `Reason: ${comment}` : ""}`;
+
+    // ✅ Insert system post in scavenger_feed
+    const { error: feedError } = await supabase.from("scavenger_feed").insert([
+      {
+        team_id: submission.team_id,
+        user_id: null, // System message, no user
+        username: "System",
+        content: systemMessage,
+        media_urls: submission.media_url ? [submission.media_url] : [],
+        type: "system", // ✅ Mark as system-generated
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    if (feedError) {
+      console.error("Error posting system message:", feedError);
+    }
+
+    // ✅ Update UI state
+    setSubmissions((prevSubmissions) =>
+      prevSubmissions.map((sub) =>
+        sub.id === submissionId ? { ...sub, status, judge_comment: comment } : sub
+      )
+    );
   }
 
   if (!user?.id) return <p>Loading user...</p>;
@@ -127,28 +174,58 @@ export default function TeamPage() {
           <TaskSubmissionForm tasks={tasks} selectedTeam={selectedTeam} />
 
           {/* 🔥 Judges See Pending Submissions */}
-            {isAdmin && (
+          {isAdmin && (
             <div className="mt-6">
-                <h3 className="text-lg text-white font-semibold">📷 Pending Submissions</h3>
-                {submissions.length === 0 ? (
+              <h3 className="text-lg text-white font-semibold">📷 Pending Submissions</h3>
+              {submissions.length === 0 ? (
                 <p>No submissions yet.</p>
-                ) : (
-                <ul className="space-y-2">
+              ) : (
+                <ul className="space-y-4">
                   {submissions.map((submission) => {
                     const task = tasks.find((t) => t.id === submission.task_id); // ✅ Find task by ID
 
-                    return (
-                      <li key={submission.id} className="p-2 bg-white rounded-lg text-black">
-                        <h4 className="text-md font-semibold">{task?.title || "Unknown Task"}</h4>
+                    // ✅ Ensure the media URL is correctly formatted
+                    let mediaUrl = submission.media_url;
+                    if (!mediaUrl.startsWith("http")) {
+                      mediaUrl = supabase.storage.from("scavenger-feed").getPublicUrl(mediaUrl).data.publicUrl;
+                    }
 
-                        <div className="flex justify-between">
-                          <a href={submission.media_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">
-                            View Submission
-                          </a>
-                          <span className={`px-2 py-1 rounded ${submission.status === "pending" ? "bg-yellow-500" : submission.status === "approved" ? "bg-green-500" : "bg-red-500"}`}>
-                            {submission.status}
-                          </span>
-                        </div>
+                    return (
+                      <li key={submission.id} className="p-4 bg-white rounded-lg text-black shadow-md">
+                        <h4 className="text-md font-semibold">{task?.title || "Unknown Task"}</h4>
+                        <p className="text-gray-600 text-sm">{task?.description}</p> {/* ✅ Show task description */}
+
+                        {/* 🖼️ Display Image or 🎥 Video Inline */}
+                        {mediaUrl ? (
+                          <div className="mt-3 flex justify-center">
+                            {mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                              <img
+                                key={mediaUrl}
+                                src={mediaUrl}
+                                alt="Submission Media"
+                                className="rounded-lg max-w-full max-h-60"
+                                onError={(e) => console.error("🛑 Image Load Error:", e.currentTarget.src)}
+                              />
+                            ) : mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                              <video key={mediaUrl} controls className="rounded-lg max-w-full max-h-60">
+                                <source src={mediaUrl} type="video/mp4" />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : (
+                              <p className="text-gray-500">Unsupported media type</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500">⚠️ Media not found</p>
+                        )}
+
+                        {/* ✅ Status Label */}
+                        <span
+                          className={`block text-center text-sm font-semibold mt-2 px-3 py-1 rounded 
+                          ${submission.status === "pending" ? "bg-yellow-500" : submission.status === "approved" ? "bg-green-500" : "bg-red-500"}`}
+                        >
+                          {submission.status}
+                        </span>
 
                         {/* ✅ Comment Input for Judges */}
                         <textarea
@@ -158,7 +235,7 @@ export default function TeamPage() {
                           onChange={(e) => setComments((prev) => ({ ...prev, [submission.id]: e.target.value }))}
                         />
 
-                        {/* ✅ Approve/Reject Buttons (Now Passes Comment) */}
+                        {/* ✅ Approve/Reject Buttons */}
                         {isAdmin && submission.status === "pending" && (
                           <div className="mt-2 flex space-x-2">
                             <button
@@ -179,9 +256,9 @@ export default function TeamPage() {
                     );
                   })}
                 </ul>
-                )}
+              )}
             </div>
-            )}
+          )}
         </TabsContent>
 
         {/* 📰 Feed Tab */}

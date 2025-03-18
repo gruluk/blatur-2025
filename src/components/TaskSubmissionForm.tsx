@@ -25,30 +25,35 @@ export function TaskSubmissionForm({
   async function handleSubmit() {
     if (!taskId || !media) return alert("Please select a task and upload media.");
 
-    // ✅ Upload file
-    const filePath = `scavenger_media/${selectedTeam.id}/${taskId}-${Date.now()}.jpg`;
-    const { error: uploadError } = await supabase.storage.from("scavenger-feed").upload(filePath, file);
+    // ✅ Save directly inside the bucket (`scavenger-feed/{team_id}/`)
+    const filePath = `${selectedTeam.id}/${taskId}-${Date.now()}.${media.name.split(".").pop()}`;
+
+    const { error: uploadError } = await supabase.storage.from("scavenger-feed").upload(filePath, media);
 
     if (uploadError) {
-      console.error("Upload error:", uploadError);
+      console.error("❌ Upload error:", uploadError);
       return;
     }
 
-    // ✅ Store submission
+    // ✅ Get public URL
+    const { data } = supabase.storage.from("scavenger-feed").getPublicUrl(filePath);
+    const publicUrl = data.publicUrl;
+
+    // ✅ Store submission with correct path
     const { error: submissionError } = await supabase.from("scavenger_submissions").insert([
       {
         task_id: taskId,
         team_id: selectedTeam.id,
-        media_url: filePath,
+        media_url: publicUrl, // ✅ Store public URL directly
         status: "pending",
         submitted_at: new Date().toISOString(),
       },
     ]);
 
     if (submissionError) {
-      console.error("Error submitting:", submissionError);
+      console.error("❌ Error submitting:", submissionError);
     } else {
-      alert("Submission sent!");
+      alert("✅ Submission sent!");
       setTaskId(null);
       setMedia(null);
     }
