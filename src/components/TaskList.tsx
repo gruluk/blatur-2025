@@ -5,21 +5,35 @@ import { ScavengerTask, ScavengerSubmission } from "@/types";
 export function TaskList({ tasks, teamId }: { tasks: ScavengerTask[]; teamId: string }) {
   const [submissions, setSubmissions] = useState<ScavengerSubmission[]>([]);
 
-  useEffect(() => {
-    async function fetchSubmissions() {
-      const { data, error } = await supabase
-        .from("scavenger_submissions")
-        .select("*")
-        .eq("team_id", teamId);
+  async function fetchSubmissions() {
+    const { data, error } = await supabase
+      .from("scavenger_submissions")
+      .select("*")
+      .eq("team_id", teamId);
 
-      if (error) {
-        console.error("Error fetching submissions:", error);
-      } else {
-        setSubmissions(data || []);
-      }
+    if (error) {
+      console.error("🚨 Error fetching submissions:", error);
+      return;
     }
 
+    console.log("✅ Submissions fetched:", data); // 🛠 Debugging log
+    setSubmissions(data || []);
+  }
+
+  useEffect(() => {
     fetchSubmissions();
+
+    const subscription = supabase
+      .channel("scavenger_submissions")
+      .on("postgres_changes", { event: "*", schema: "public", table: "scavenger_submissions" }, (payload) => {
+        console.log("🔄 Submission Change Detected:", payload); // 🛠 Debugging log
+        fetchSubmissions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [teamId]);
 
   // ✅ Function to get submission status
@@ -32,7 +46,7 @@ export function TaskList({ tasks, teamId }: { tasks: ScavengerTask[]; teamId: st
   }
 
   return (
-    <div className="bg-white p-2 rounded-lg">
+    <div className="bg-white mt-5 p-2 rounded-lg">
       <h3 className="text-lg text-onlineBlue font-semibold">📜 Tasks</h3>
       <ul className="list-disc text-OnlineBlue ml-5">
         {tasks.length === 0 ? (

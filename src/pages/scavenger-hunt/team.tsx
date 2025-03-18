@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClerkUser, ScavengerTask, ScavengerTeam, ScavengerSubmission } from "@/types";
 import { TaskSubmissionForm } from "@/components/TaskSubmissionForm";
 import ScavengerFeed from "@/components/ScavengerFeed";
+import { TeamScore } from "@/components/TeamScore";
+import Header from "@/components/Header";
 
 export default function TeamPage() {
   const { user } = useUser();
@@ -18,6 +20,8 @@ export default function TeamPage() {
   const [clerkUsers, setClerkUsers] = useState<ClerkUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [comments, setComments] = useState<{ [submissionId: string]: string }>({});
+  const [adjustedPoints, setAdjustedPoints] = useState<{ [submissionId: string]: number }>({});
+
 
   const isAdmin = (user?.publicMetadata as { isAdmin?: boolean })?.isAdmin === true;
 
@@ -56,10 +60,17 @@ export default function TeamPage() {
     if (!selectedTeam) return;
     
     async function fetchTasks() {
-      const { data, error } = await supabase.from("scavenger_tasks").select("id, title, description");
+      const { data, error } = await supabase
+        .from("scavenger_tasks")
+        .select("id, title, description, points"); // ✅ Ensure `points` is fetched
 
-      if (error) console.error("Error fetching tasks:", error);
-      else setTasks(data || []);
+      if (error) {
+        console.error("🚨 Error fetching tasks:", error);
+        return;
+      }
+
+      console.log("✅ Tasks fetched:", data); // 🛠 Debugging log
+      setTasks(data || []);
     }
 
     async function fetchSubmissions() {
@@ -79,11 +90,16 @@ export default function TeamPage() {
     fetchSubmissions();
   }, [selectedTeam]);
 
-  async function handleJudgeAction(submissionId: string, status: "approved" | "rejected", comment: string) {
+  async function handleJudgeAction(
+    submissionId: string, 
+    status: "approved" | "rejected", 
+    comment: string, 
+    points: number | null
+  ) {
     // ✅ Get submission details
     const { data: submission, error: fetchError } = await supabase
       .from("scavenger_submissions")
-      .select("task_id, team_id, media_url")
+      .select("task_id, team_id, media_url, points_awarded")
       .eq("id", submissionId)
       .single();
 
@@ -92,19 +108,21 @@ export default function TeamPage() {
       return;
     }
 
-    // ✅ Get the task title
+    // ✅ Get the task details (title and points)
     const { data: task } = await supabase
       .from("scavenger_tasks")
-      .select("title")
+      .select("title, points")
       .eq("id", submission.task_id)
       .single();
 
     const taskTitle = task?.title || "Unknown Task";
+    const defaultPoints = task?.points || 0;
+    const finalPoints = status === "approved" ? points ?? defaultPoints : 0; // ✅ Use judge-adjusted points or default
 
-    // ✅ Update submission status
+    // ✅ Update submission status and points awarded
     const { error: updateError } = await supabase
       .from("scavenger_submissions")
-      .update({ status, judge_comment: comment })
+      .update({ status, judge_comment: comment, points_awarded: finalPoints })
       .eq("id", submissionId);
 
     if (updateError) {
@@ -115,7 +133,7 @@ export default function TeamPage() {
     // ✅ Generate a system message
     const systemMessage =
       status === "approved"
-        ? `✅ Task **"${taskTitle}"** has been **approved**! 🎉`
+        ? `✅ Task **"${taskTitle}"** has been **approved** with **${finalPoints} points**! 🎉`
         : `❌ Task **"${taskTitle}"** has been **rejected**. ${comment ? `Reason: ${comment}` : ""}`;
 
     // ✅ Insert system post in scavenger_feed
@@ -138,7 +156,7 @@ export default function TeamPage() {
     // ✅ Update UI state
     setSubmissions((prevSubmissions) =>
       prevSubmissions.map((sub) =>
-        sub.id === submissionId ? { ...sub, status, judge_comment: comment } : sub
+        sub.id === submissionId ? { ...sub, status, judge_comment: comment, points_awarded: finalPoints } : sub
       )
     );
   }
@@ -148,15 +166,13 @@ export default function TeamPage() {
   if (!selectedTeam) return <p>No team found. Ask a judge</p>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl text-white font-bold">🏆 Scavenger Hunt - Team Page</h1>
+    <div className="p-6 mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
+      <Header />
+      <h1 className="text-2xl text-white font-bold mt-15">🏆 Scavenger Hunt - Team Page</h1>
 
       {isAdmin && teams.length > 1 && (
         <TeamSelector teams={teams} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam} />
       )}
-
-      <h2 className="mt-4 text-xl text-white font-bold">Team: {selectedTeam.name}</h2>
-      <TeamMembers members={selectedTeam.members} clerkUsers={clerkUsers} />
 
       {/* ✅ Tabs System */}
       <Tabs defaultValue="tasks" className="w-full mt-6">
@@ -170,8 +186,9 @@ export default function TeamPage() {
 
         {/* 📜 Tasks Tab */}
         <TabsContent value="tasks">
-          <TaskList tasks={tasks} teamId={selectedTeam.id} />
+          <TeamScore teamId={selectedTeam.id} />
           <TaskSubmissionForm tasks={tasks} selectedTeam={selectedTeam} />
+          <TaskList tasks={tasks} teamId={selectedTeam.id} />
 
           {/* 🔥 Judges See Pending Submissions */}
           {isAdmin && (
@@ -237,19 +254,42 @@ export default function TeamPage() {
 
                         {/* ✅ Approve/Reject Buttons */}
                         {isAdmin && submission.status === "pending" && (
-                          <div className="mt-2 flex space-x-2">
-                            <button
-                              className="bg-green-500 px-3 py-1 rounded"
-                              onClick={() => handleJudgeAction(submission.id, "approved", comments[submission.id] || "")}
-                            >
-                              ✅ Approve
-                            </button>
-                            <button
-                              className="bg-red-500 px-3 py-1 rounded"
-                              onClick={() => handleJudgeAction(submission.id, "rejected", comments[submission.id] || "")}
-                            >
-                              ❌ Reject
-                            </button>
+                          <div className="mt-2 flex flex-col space-y-2">
+                            {/* 📝 Points Adjustment */}
+                            <label className="text-sm text-gray-400">Adjust Points:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              defaultValue={task?.points || 0}
+                              className="w-full p-2 border rounded bg-gray-900 text-white"
+                              onChange={(e) => 
+                                setAdjustedPoints((prev) => ({
+                                  ...prev, 
+                                  [submission.id]: Number(e.target.value) || 0, // ✅ Ensure it's always a number
+                                }))
+                              }
+                            />
+
+                            {/* ✅ Approve/Reject Buttons */}
+                            <div className="mt-2 flex space-x-2">
+                              <button
+                                className="bg-green-500 px-3 py-1 rounded"
+                                onClick={() => handleJudgeAction(
+                                  submission.id, 
+                                  "approved", 
+                                  comments[submission.id] || "", 
+                                  adjustedPoints[submission.id] ?? (task?.points || 0) // ✅ Group properly
+                                )}
+                              >
+                                ✅ Approve
+                              </button>
+                              <button
+                                className="bg-red-500 px-3 py-1 rounded"
+                                onClick={() => handleJudgeAction(submission.id, "rejected", comments[submission.id] || "", 0)}
+                              >
+                                ❌ Reject
+                              </button>
+                            </div>
                           </div>
                         )}
                       </li>
@@ -269,7 +309,8 @@ export default function TeamPage() {
         {/* ℹ️ Information Tab */}
         <TabsContent value="info">
           <div className="p-4 bg-gray-100 rounded-md shadow">
-            <h3 className="text-lg font-semibold">ℹ️ Team Information</h3>
+            <h2 className="mt-2 text-xl text-onlineBlue font-bold">{selectedTeam.name}</h2>
+            <TeamMembers members={selectedTeam.members} clerkUsers={clerkUsers} />
             <p className="text-gray-700 mt-2">🏆 Complete tasks to earn points. Judges must approve submissions.</p>
           </div>
         </TabsContent>
