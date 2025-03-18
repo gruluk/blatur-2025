@@ -8,6 +8,7 @@ export interface ScavengerTask {
   id: string;
   title: string;
   points: number;
+  description: string;
 }
 
 export interface ClerkUser {
@@ -23,5 +24,6 @@ export interface ScavengerSubmission {
   media_url: string;
   submitted_at: string;
   status: "pending" | "approved" | "rejected";
-  judge_id?: string;
+  judge_id?: string; // Optional, only exists after review
+  judge_comment?: string; // ✅ Add this to store rejection reason
 }

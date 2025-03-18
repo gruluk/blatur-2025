@@ -1,121 +1,84 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../supabase";
-import { ScavengerTask, ScavengerTeam } from "@/types";
+import { ScavengerTask, ScavengerSubmission, ScavengerTeam } from "@/types";
 
-interface TaskSubmissionFormProps {
+export function TaskSubmissionForm({
+  tasks,
+  selectedTeam,
+}: {
   tasks: ScavengerTask[];
   selectedTeam: ScavengerTeam;
-}
+}) {
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [media, setMedia] = useState<File | null>(null);
+  const [submissions, setSubmissions] = useState<ScavengerSubmission[]>([]);
 
-export function TaskSubmissionForm({ tasks, selectedTeam }: TaskSubmissionFormProps) {
-  const [selectedTask, setSelectedTask] = useState<string>("");
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  // ✅ Fetch existing submissions
+  useEffect(() => {
+    async function fetchSubmissions() {
+      const { data } = await supabase.from("scavenger_submissions").select("*").eq("team_id", selectedTeam.id);
+      setSubmissions(data || []);
+    }
+    fetchSubmissions();
+  }, [selectedTeam]);
 
   async function handleSubmit() {
-    if (!selectedTask || !file) {
-      alert("Please select a task and upload a file.");
-      return;
-    }
+    if (!taskId || !media) return alert("Please select a task and upload media.");
 
-    setUploading(true);
-
-    // ✅ Check if there is already a pending submission for this task
-    const { data: existingSubmission, error: existingError } = await supabase
-      .from("scavenger_submissions")
-      .select("*")
-      .eq("task_id", selectedTask)
-      .eq("team_id", selectedTeam.id)
-      .eq("status", "pending");
-
-    if (existingError) {
-      console.error("Error checking existing submissions:", existingError);
-      setUploading(false);
-      return;
-    }
-
-    if (existingSubmission && existingSubmission.length > 0) {
-      alert("You already have a pending submission for this task!");
-      setUploading(false);
-      return;
-    }
-
-    // ✅ Upload file to Supabase Storage
-    const fileExt = file.name.split(".").pop();
-    const filePath = `submissions/${selectedTeam.id}/${selectedTask}-${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("scavenger_media")
-      .upload(filePath, file);
+    // ✅ Upload file
+    const filePath = `scavenger_media/${selectedTeam.id}/${taskId}-${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage.from("scavenger_media").upload(filePath, media);
 
     if (uploadError) {
-      console.error("Error uploading file:", uploadError);
-      setUploading(false);
+      console.error("Upload error:", uploadError);
       return;
     }
 
-    // ✅ Get public URL
-    const { data: publicURLData } = supabase.storage.from("scavenger_media").getPublicUrl(filePath);
-    const mediaUrl = publicURLData.publicUrl;
-
-    // ✅ Insert submission into database
-    const { error: insertError } = await supabase.from("scavenger_submissions").insert([
+    // ✅ Store submission
+    const { error: submissionError } = await supabase.from("scavenger_submissions").insert([
       {
-        task_id: selectedTask,
+        task_id: taskId,
         team_id: selectedTeam.id,
-        media_url: mediaUrl,
-        submitted_at: new Date().toISOString(),
+        media_url: filePath,
         status: "pending",
+        submitted_at: new Date().toISOString(),
       },
     ]);
 
-    if (insertError) {
-      console.error("Error inserting submission:", insertError);
-      setUploading(false);
-      return;
+    if (submissionError) {
+      console.error("Error submitting:", submissionError);
+    } else {
+      alert("Submission sent!");
+      setTaskId(null);
+      setMedia(null);
     }
+  }
 
-    alert("Submission uploaded successfully! Waiting for approval.");
-    setSelectedTask("");
-    setFile(null);
-    setUploading(false);
+  // ✅ Check if task has a rejected submission
+  function isRejected(taskId: string) {
+    const sub = submissions.find((sub) => sub.task_id === taskId);
+    return sub?.status === "rejected" ? `❌ Rejected: ${sub.judge_comment || "No reason given"}` : null;
   }
 
   return (
-    <div className="p-4 bg-gray-100 rounded-md shadow">
-      <h3 className="text-lg font-semibold">📤 Submit Task Proof</h3>
-
-      {/* Task Selection */}
-      <label className="block mt-2">Select Task:</label>
-      <select
-        className="w-full border p-2 rounded"
-        value={selectedTask}
-        onChange={(e) => setSelectedTask(e.target.value)}
-      >
-        <option value="">-- Select a Task --</option>
-        {tasks.map((task) => (
-          <option key={task.id} value={task.id}>
-            {task.title}
-          </option>
-        ))}
+    <div>
+      <h3 className="mt-4 text-lg font-semibold">📤 Submit Task</h3>
+      <select className="border p-2 w-full" value={taskId || ""} onChange={(e) => setTaskId(e.target.value)}>
+        <option value="">Select a task</option>
+        {tasks.map((task) => {
+            const sub = submissions.find((sub) => sub.task_id === task.id);
+            const isDisabled = sub && sub.status !== "rejected"; // ✅ Disable if submitted and not rejected
+            return (
+            <option key={task.id} value={task.id} disabled={isDisabled}>
+                {task.title} {isRejected(task.id) && `(${isRejected(task.id)})`}
+            </option>
+            );
+        })}
       </select>
 
-      {/* File Upload */}
-      <label className="block mt-2">Upload Proof:</label>
-      <input
-        type="file"
-        accept="image/*,video/*"
-        className="w-full border p-2 rounded"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
-      />
-
-      {/* Submit Button */}
-      <button
-        className="bg-blue-500 text-white px-4 py-2 rounded mt-3 w-full disabled:bg-gray-400"
-        onClick={handleSubmit}
-        disabled={uploading}
-      >
-        {uploading ? "Uploading..." : "Submit Proof"}
+      <input type="file" accept="image/*" onChange={(e) => setMedia(e.target.files?.[0] || null)} className="mt-2" />
+      <button className="bg-green-500 text-white px-4 py-2 rounded mt-2" onClick={handleSubmit}>
+        Submit
       </button>
     </div>
   );
