@@ -26,4 +26,8 @@ export interface ScavengerSubmission {
   status: "pending" | "approved" | "rejected";
   judge_id?: string; // Optional, only exists after review
   judge_comment?: string; // ✅ Add this to store rejection reason
+  scavenger_tasks?: {
+    title: string;
+    description: string;
+  };
 }

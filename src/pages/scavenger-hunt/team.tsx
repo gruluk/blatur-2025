@@ -6,8 +6,8 @@ import { TeamMembers } from "@/components/TeamMembers";
 import { TaskList } from "@/components/TaskList";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClerkUser, ScavengerTask, ScavengerTeam, ScavengerSubmission } from "@/types";
-import { ScavengerFeed } from "@/components/ScavengerFeed";
 import { TaskSubmissionForm } from "@/components/TaskSubmissionForm";
+import ScavengerFeed from "@/components/ScavengerFeed";
 
 export default function TeamPage() {
   const { user } = useUser();
@@ -56,21 +56,23 @@ export default function TeamPage() {
     if (!selectedTeam) return;
     
     async function fetchTasks() {
-      const { data, error } = await supabase.from("scavenger_tasks").select("*");
+      const { data, error } = await supabase.from("scavenger_tasks").select("id, title, description");
+
       if (error) console.error("Error fetching tasks:", error);
-      setTasks(data || []);
+      else setTasks(data || []);
     }
 
     async function fetchSubmissions() {
-        if (!selectedTeam) return;
+      if (!selectedTeam) return;
 
-        const { data, error } = await supabase
-            .from("scavenger_submissions")
-            .select("*")
-            .eq("team_id", selectedTeam.id);
+      const { data, error } = await supabase
+        .from("scavenger_submissions")
+        .select("*, scavenger_tasks(title, description)") // ✅ Include task details
+        .eq("team_id", selectedTeam.id)
+        .order("submitted_at", { ascending: false });
 
-        if (error) console.error("Error fetching submissions:", error);
-        setSubmissions(data || []);
+      if (error) console.error("Error fetching submissions:", error);
+      else setSubmissions(data || []);
     }
 
     fetchTasks();
@@ -99,19 +101,19 @@ export default function TeamPage() {
   if (!selectedTeam) return <p>No team found. Ask a judge</p>;
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg">
-      <h1 className="text-2xl font-bold">🏆 Scavenger Hunt - Team Page</h1>
+    <div className="p-6">
+      <h1 className="text-2xl text-white font-bold">🏆 Scavenger Hunt - Team Page</h1>
 
       {isAdmin && teams.length > 1 && (
         <TeamSelector teams={teams} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam} />
       )}
 
-      <h2 className="mt-4 text-xl font-bold">Team: {selectedTeam.name}</h2>
+      <h2 className="mt-4 text-xl text-white font-bold">Team: {selectedTeam.name}</h2>
       <TeamMembers members={selectedTeam.members} clerkUsers={clerkUsers} />
 
       {/* ✅ Tabs System */}
       <Tabs defaultValue="tasks" className="w-full mt-6">
-        <TabsList className="flex justify-center items-center w-full bg-transparent p-2 rounded-lg mb-3">
+        <TabsList className="flex justify-center text-white items-center w-full bg-transparent p-2 rounded-lg mb-3">
           <div className="flex w-full max-w-md justify-center gap-2 flex-wrap">
             <TabsTrigger value="tasks">📜 Tasks</TabsTrigger>
             <TabsTrigger value="feed">📰 Feed</TabsTrigger>
@@ -127,68 +129,55 @@ export default function TeamPage() {
           {/* 🔥 Judges See Pending Submissions */}
             {isAdmin && (
             <div className="mt-6">
-                <h3 className="text-lg font-semibold">📷 Pending Submissions</h3>
+                <h3 className="text-lg text-white font-semibold">📷 Pending Submissions</h3>
                 {submissions.length === 0 ? (
                 <p>No submissions yet.</p>
                 ) : (
                 <ul className="space-y-2">
-                    {submissions.map((submission) => (
-                    <li key={submission.id} className="p-2 bg-gray-800 text-white rounded">
+                  {submissions.map((submission) => {
+                    const task = tasks.find((t) => t.id === submission.task_id); // ✅ Find task by ID
+
+                    return (
+                      <li key={submission.id} className="p-2 bg-white rounded-lg text-black">
+                        <h4 className="text-md font-semibold">{task?.title || "Unknown Task"}</h4>
+
                         <div className="flex justify-between">
-                        <a
-                            href={submission.media_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 underline"
-                        >
+                          <a href={submission.media_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">
                             View Submission
-                        </a>
-                        <span
-                            className={`px-2 py-1 rounded ${
-                            submission.status === "pending"
-                                ? "bg-yellow-500"
-                                : submission.status === "approved"
-                                ? "bg-green-500"
-                                : "bg-red-500"
-                            }`}
-                        >
+                          </a>
+                          <span className={`px-2 py-1 rounded ${submission.status === "pending" ? "bg-yellow-500" : submission.status === "approved" ? "bg-green-500" : "bg-red-500"}`}>
                             {submission.status}
-                        </span>
+                          </span>
                         </div>
 
                         {/* ✅ Comment Input for Judges */}
                         <textarea
-                        className="w-full p-2 mt-2 border rounded bg-gray-900 text-white"
-                        placeholder="Leave a comment (optional)"
-                        value={comments[submission.id] || ""}
-                        onChange={(e) =>
-                            setComments((prev) => ({ ...prev, [submission.id]: e.target.value }))
-                        }
+                          className="w-full p-2 mt-2 border rounded bg-gray-900 text-white"
+                          placeholder="Leave a comment (optional)"
+                          value={comments[submission.id] || ""}
+                          onChange={(e) => setComments((prev) => ({ ...prev, [submission.id]: e.target.value }))}
                         />
 
                         {/* ✅ Approve/Reject Buttons (Now Passes Comment) */}
                         {isAdmin && submission.status === "pending" && (
-                        <div className="mt-2 flex space-x-2">
+                          <div className="mt-2 flex space-x-2">
                             <button
-                            className="bg-green-500 px-3 py-1 rounded"
-                            onClick={() =>
-                                handleJudgeAction(submission.id, "approved", comments[submission.id] || "")
-                            }
+                              className="bg-green-500 px-3 py-1 rounded"
+                              onClick={() => handleJudgeAction(submission.id, "approved", comments[submission.id] || "")}
                             >
-                            ✅ Approve
+                              ✅ Approve
                             </button>
                             <button
-                            className="bg-red-500 px-3 py-1 rounded"
-                            onClick={() =>
-                                handleJudgeAction(submission.id, "rejected", comments[submission.id] || "")
-                            }
+                              className="bg-red-500 px-3 py-1 rounded"
+                              onClick={() => handleJudgeAction(submission.id, "rejected", comments[submission.id] || "")}
                             >
-                            ❌ Reject
+                              ❌ Reject
                             </button>
-                        </div>
+                          </div>
                         )}
-                    </li>
-                    ))}
+                      </li>
+                    );
+                  })}
                 </ul>
                 )}
             </div>
@@ -197,7 +186,7 @@ export default function TeamPage() {
 
         {/* 📰 Feed Tab */}
         <TabsContent value="feed">
-          <ScavengerFeed />
+          {selectedTeam && <ScavengerFeed teamId={selectedTeam.id} />}
         </TabsContent>
 
         {/* ℹ️ Information Tab */}

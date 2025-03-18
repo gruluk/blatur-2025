@@ -36,8 +36,10 @@ export default function ScavengerJudging() {
       if (submissionsError) console.error("Error fetching submissions:", submissionsError);
       else setSubmissions(submissionsData || []);
 
-      // ✅ Fetch tasks
-      const { data: tasksData, error: tasksError } = await supabase.from("scavenger_tasks").select("id, title");
+      // ✅ Fetch tasks with description
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("scavenger_tasks")
+        .select("id, title, description"); // ✅ Now fetching descriptions
       if (tasksError) console.error("Error fetching tasks:", tasksError);
       else setTasks(tasksData || []);
 
@@ -59,47 +61,47 @@ export default function ScavengerJudging() {
 
   return (
     <div className="mt-6">
-      <h3 className="text-lg font-semibold mb-2">📷 Pending Submissions</h3>
-      {Object.keys(submissionsByTeam).length === 0 ? (
+        <h3 className="text-lg font-semibold mb-2">📷 Pending Submissions</h3>
+        {Object.keys(submissionsByTeam).length === 0 ? (
         <p>No pending submissions.</p>
-      ) : (
+        ) : (
         <ul className="space-y-4">
-          {Object.entries(submissionsByTeam).map(([teamId, teamSubmissions]) => {
+            {Object.entries(submissionsByTeam).map(([teamId, teamSubmissions]) => {
             const teamName = teams.find((t) => t.id === teamId)?.name || "Unknown Team";
             return (
-              <li key={teamId} className="p-4 bg-gray-800 text-white rounded">
+                <li key={teamId} className="p-4 bg-gray-800 text-white rounded">
                 <h4 className="text-lg font-semibold">🏆 {teamName}</h4>
                 <ul className="mt-2 space-y-2">
-                  {teamSubmissions.map((submission) => {
-                    const taskTitle = tasks.find((t) => t.id === submission.task_id)?.title || "Unknown Task";
+                    {teamSubmissions.map((submission) => {
+                    const task = tasks.find((t) => t.id === submission.task_id);
                     return (
-                      <li key={submission.id} className="flex justify-between items-center bg-gray-700 p-2 rounded">
-                        <span>📜 {taskTitle}</span>
-                        <div className="flex space-x-2">
-                          <a
+                        <li key={submission.id} className="flex flex-col bg-gray-700 p-3 rounded space-y-2">
+                        <span className="font-bold">📜 {task?.title || "Unknown Task"}</span>
+                        <div className="flex justify-between items-center">
+                            <a
                             href={submission.media_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-400 underline"
-                          >
+                            >
                             View Media
-                          </a>
-                          <button
+                            </a>
+                            <button
                             className="bg-blue-500 px-3 py-1 rounded"
                             onClick={() => router.push(`/scavenger-hunt/team/${submission.team_id}`)}
-                          >
+                            >
                             👀 Review
-                          </button>
+                            </button>
                         </div>
-                      </li>
+                        </li>
                     );
-                  })}
+                    })}
                 </ul>
-              </li>
+                </li>
             );
-          })}
+            })}
         </ul>
-      )}
+        )}
     </div>
-  );
+    );
 }

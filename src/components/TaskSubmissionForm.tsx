@@ -27,7 +27,7 @@ export function TaskSubmissionForm({
 
     // ✅ Upload file
     const filePath = `scavenger_media/${selectedTeam.id}/${taskId}-${Date.now()}.jpg`;
-    const { error: uploadError } = await supabase.storage.from("scavenger_media").upload(filePath, media);
+    const { error: uploadError } = await supabase.storage.from("scavenger-feed").upload(filePath, file);
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
@@ -61,8 +61,8 @@ export function TaskSubmissionForm({
   }
 
   return (
-    <div>
-      <h3 className="mt-4 text-lg font-semibold">📤 Submit Task</h3>
+    <div className="bg-white p-2 rounded-lg mt-5">
+      <h3 className="text-lg font-semibold">📤 Submit Task</h3>
       <select className="border p-2 w-full" value={taskId || ""} onChange={(e) => setTaskId(e.target.value)}>
         <option value="">Select a task</option>
         {tasks.map((task) => {

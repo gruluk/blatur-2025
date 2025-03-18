@@ -32,9 +32,9 @@ export function TaskList({ tasks, teamId }: { tasks: ScavengerTask[]; teamId: st
   }
 
   return (
-    <div>
-      <h3 className="mt-4 text-lg font-semibold">📜 Tasks</h3>
-      <ul className="list-disc ml-5">
+    <div className="bg-white p-2 rounded-lg">
+      <h3 className="text-lg text-onlineBlue font-semibold">📜 Tasks</h3>
+      <ul className="list-disc text-OnlineBlue ml-5">
         {tasks.length === 0 ? (
           <p>No tasks assigned yet.</p>
         ) : (
