@@ -15,3 +15,13 @@ export interface ClerkUser {
   firstName: string | null;
   lastName: string | null;
 }
+
+export interface ScavengerSubmission {
+  id: string;
+  task_id: string;
+  team_id: string;
+  media_url: string;
+  submitted_at: string;
+  status: "pending" | "approved" | "rejected";
+  judge_id?: string;
+}
