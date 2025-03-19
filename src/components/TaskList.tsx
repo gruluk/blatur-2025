@@ -52,7 +52,7 @@ export function TaskList({ tasks, teamId }: { tasks: ScavengerTask[]; teamId: st
   }
 
   return (
-    <div className="mt-6 px-4">
+    <div className="mt-6 px-4 w-full max-w-3xl mx-auto">
       <h3 className="text-2xl font-semibold text-white mb-4">📜 Oppgaver</h3>
 
       {tasks.length === 0 ? (

@@ -25,6 +25,35 @@ export default function TeamPage() {
 
   const isAdmin = (user?.publicMetadata as { isAdmin?: boolean })?.isAdmin === true;
 
+  async function fetchSubmissions() {
+    if (!selectedTeam) return;
+
+    const { data, error } = await supabase
+      .from("scavenger_submissions")
+      .select("*, scavenger_tasks(title, description)") // ✅ Include task details
+      .eq("team_id", selectedTeam.id)
+      .order("submitted_at", { ascending: false });
+
+    if (error) console.error("Error fetching submissions:", error);
+    else setSubmissions(data || []);
+  }
+
+  async function fetchTasks() {
+    if (!selectedTeam) return;
+    
+    const { data, error } = await supabase
+      .from("scavenger_tasks")
+      .select("id, title, description, points");
+
+    if (error) {
+      console.error("🚨 Error fetching tasks:", error);
+      return;
+    }
+
+    console.log("✅ Tasks fetched:", data);
+    setTasks(data || []);
+  }
+
   useEffect(() => {
     async function fetchTeams() {
       setLoading(true);
@@ -58,33 +87,6 @@ export default function TeamPage() {
 
   useEffect(() => {
     if (!selectedTeam) return;
-    
-    async function fetchTasks() {
-      const { data, error } = await supabase
-        .from("scavenger_tasks")
-        .select("id, title, description, points"); // ✅ Ensure `points` is fetched
-
-      if (error) {
-        console.error("🚨 Error fetching tasks:", error);
-        return;
-      }
-
-      console.log("✅ Tasks fetched:", data); // 🛠 Debugging log
-      setTasks(data || []);
-    }
-
-    async function fetchSubmissions() {
-      if (!selectedTeam) return;
-
-      const { data, error } = await supabase
-        .from("scavenger_submissions")
-        .select("*, scavenger_tasks(title, description)") // ✅ Include task details
-        .eq("team_id", selectedTeam.id)
-        .order("submitted_at", { ascending: false });
-
-      if (error) console.error("Error fetching submissions:", error);
-      else setSubmissions(data || []);
-    }
 
     fetchTasks();
     fetchSubmissions();
@@ -187,7 +189,12 @@ export default function TeamPage() {
         {/* 📜 Tasks Tab */}
         <TabsContent value="tasks">
           <TeamScore teamId={selectedTeam.id} />
-          <TaskSubmissionForm tasks={tasks} selectedTeam={selectedTeam} />
+          <TaskSubmissionForm 
+            tasks={tasks} 
+            selectedTeam={selectedTeam} 
+            refreshSubmissions={fetchSubmissions} 
+            refreshTasks={fetchTasks}
+          />
           <TaskList tasks={tasks} teamId={selectedTeam.id} />
 
           {/* 🔥 Judges See Pending Submissions */}
