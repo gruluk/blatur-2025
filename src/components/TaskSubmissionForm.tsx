@@ -110,7 +110,8 @@ export function TaskSubmissionForm({
       {/* Task selection */}
       <label className="block font-medium text-gray-700">Velg oppgave:</label>
       <select
-        className="border border-gray-300 p-3 w-full rounded-md mt-1 focus:ring-2 focus:ring-blue-400"
+        className="border border-gray-300 p-3 w-full rounded-md mt-1 focus:ring-2 focus:ring-blue-400 text-lg max-w-full truncate"
+        style={{ fontSize: "16px" }} // 🔥 Prevents mobile zoom
         value={taskId || ""}
         onChange={(e) => setTaskId(e.target.value)}
       >
