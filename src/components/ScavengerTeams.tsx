@@ -130,7 +130,7 @@ export default function ScavengerTeams() {
       {/* 🔥 Team List */}
       <ul className="mt-4">
         {teams.map((team) => (
-          <li key={team.id} className="p-2 bg-gray-800 text-white rounded">
+          <li key={team.id} className="p-2 bg-white text-onlineBlue mt-5 rounded">
             <div className="flex justify-between">
               <span>{team.name}</span>
               <div>
@@ -140,7 +140,7 @@ export default function ScavengerTeams() {
             </div>
 
             {/* 📌 List of Team Members */}
-            <ul className="mt-2 bg-gray-700 p-2 rounded">
+            <ul className="mt-2 bg-gray-200 p-2 rounded">
               {team.members.length === 0 ? (
                 <p className="text-gray-400">No members yet</p>
               ) : (
