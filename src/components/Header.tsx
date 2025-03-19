@@ -22,7 +22,7 @@ export default function Header() {
       <div className="flex items-center space-x-4">
         {/* 🌟 Logo */}
         <Link href="/" className="flex items-center space-x-2 cursor-pointer">
-          <Image src="/bedkom-logo.png" alt="Online Logo" width={40} height={40} className="w-10 h-10" />
+          <Image src="/bedkom.png" alt="Online Logo" width={40} height={40} className="w-10 h-10" />
         </Link>
 
         {/* 🏠 Home Icon */}
