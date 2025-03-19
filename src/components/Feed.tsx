@@ -203,8 +203,8 @@ export default function Feed() {
                     className="rounded-lg max-w-full cursor-pointer"
                     width={600}
                     height={400}
-                    controls // ✅ Requires user interaction to play
-                    poster="/video-thumbnail.jpg" // ✅ Use an actual thumbnail
+                    controls
+                    poster={`${url}#t=0.1`} // ✅ Try extracting the first frame
                     onClick={() => setFullscreenMedia({ url, type: "video" })}
                   >
                     <source src={url} type="video/mp4" />
