@@ -328,7 +328,28 @@ export default function TeamPage() {
           <div className="p-4 bg-gray-100 rounded-md shadow">
             <h2 className="mt-2 text-xl text-onlineBlue font-bold">{selectedTeam.name}</h2>
             <TeamMembers members={selectedTeam.members} clerkUsers={clerkUsers} />
-            <p className="text-gray-700 mt-2">🏆 Complete tasks to earn points. Judges must approve submissions.</p>
+
+            <h3 className="mt-4 text-lg font-semibold">📍 Hvordan det fungerer</h3>
+            <p className="text-gray-700 mt-1">
+              Laget vil motta instruksjoner om et spesifikt sted dere må besøke. For å bekrefte at dere har ankommet riktig sted, må dere sende inn bilde- eller videobevis i <strong>Feed</strong>.
+              Når en dommer godkjenner innsendingen, vil dere få instruksjoner til neste sted.
+            </p>
+
+            <h3 className="mt-4 text-lg font-semibold">🎯 Slik får dere poeng</h3>
+            <ul className="text-gray-700 list-disc list-inside mt-1">
+              <li>Det å besøke steder gir ingen poeng. Dere må gjennom alle stedene for å fullføre rebusen</li>
+              <li>Underveis må dere gjøre oppgaver som gir poeng.</li>
+              <li>For å få poeng må dere sende inn bilde- eller videobevis i <strong>Tasks</strong>.</li>
+              <li>En dommer vurderer om oppgaven er godkjent eller ikke.</li>
+              <li>Oppgaver har mulighet for <strong>bonuspoeng</strong> basert på kreativitet eller ekstra innsats!</li>
+            </ul>
+
+            <h3 className="mt-4 text-lg font-semibold">⚖️ Dommergodkjenning</h3>
+            <p className="text-gray-700 mt-1">
+              Dommerne har siste ord når det gjelder godkjenning av oppgaver og tildeling av poeng. Gjør en innsats, vær kreative og imponer dommerne for å få ekstra poeng!
+            </p>
+
+            <p className="text-gray-700 mt-4 font-semibold">🔹 Klar? Start reisen og samle poeng! 🔹</p>
           </div>
         </TabsContent>
       </Tabs>

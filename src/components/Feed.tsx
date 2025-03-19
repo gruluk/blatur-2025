@@ -201,6 +201,11 @@ export default function Feed() {
                   <video
                     key={index}
                     className="rounded-lg max-w-full cursor-pointer"
+                    width={600}
+                    height={400}
+                    muted // ✅ Allow autoplay preview
+                    playsInline // ✅ Mobile compatibility
+                    poster={url} // ✅ Use the video as a thumbnail
                     onClick={() => setFullscreenMedia({ url, type: "video" })}
                   >
                     <source src={url} type="video/mp4" />

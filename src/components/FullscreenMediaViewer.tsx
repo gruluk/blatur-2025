@@ -21,8 +21,17 @@ export default function FullscreenMediaViewer({ media, onClose }: FullscreenMedi
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={onClose}>
+      {/* ❌ Close Button */}
+      <button
+        onClick={onClose}
+        className="absolute top-5 right-5 bg-gray-900 text-white p-2 rounded-full shadow-lg hover:bg-gray-700 transition z-50"
+        aria-label="Close"
+      >
+        ❌
+      </button>
+
+      {/* 🔥 Display Image or Video */}
       <div className="relative max-w-full max-h-full flex items-center justify-center">
-        {/* 🔥 Display Image or Video */}
         {media.type === "image" ? (
           <img src={media.url} alt="Fullscreen Media" className="max-w-full max-h-screen rounded-lg" />
         ) : (
