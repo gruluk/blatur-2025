@@ -11,13 +11,14 @@ export function TaskSubmissionForm({
   tasks: ScavengerTask[];
   selectedTeam: ScavengerTeam;
   refreshSubmissions: () => void;
-  refreshTasks: () => void; 
+  refreshTasks: () => void;
 }) {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [media, setMedia] = useState<File | null>(null);
   const [submissions, setSubmissions] = useState<ScavengerSubmission[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchSubmissions() {
@@ -27,16 +28,35 @@ export function TaskSubmissionForm({
     fetchSubmissions();
   }, [selectedTeam]);
 
+  function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+
+    // Validate file type (only allow images and videos)
+    const validTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "video/ogg"];
+    if (!validTypes.includes(file.type)) {
+      setError("Ugyldig filtype! Bare bilder og videoer er tillatt.");
+      setMedia(null);
+      setPreviewUrl(null);
+      return;
+    }
+
+    setError(null);
+    setMedia(file);
+    setPreviewUrl(URL.createObjectURL(file)); // ✅ Show preview before upload
+  }
+
   async function handleSubmit() {
     if (!taskId || !media) {
-      setError("Velg en oppgave og last opp et bilde!");
+      setError("Velg en oppgave og last opp et bilde eller video!");
       return;
     }
 
     setError(null);
     setSuccess(null);
 
-    const filePath = `${selectedTeam.id}/${taskId}-${Date.now()}.${media.name.split(".").pop()}`;
+    const fileExtension = media.name.split(".").pop();
+    const filePath = `${selectedTeam.id}/${taskId}-${Date.now()}.${fileExtension}`;
     const { error: uploadError } = await supabase.storage.from("scavenger-feed").upload(filePath, media);
 
     if (uploadError) {
@@ -53,6 +73,7 @@ export function TaskSubmissionForm({
         task_id: taskId,
         team_id: selectedTeam.id,
         media_url: publicUrl,
+        media_type: media.type.startsWith("image") ? "image" : "video", // ✅ Store media type
         status: "pending",
         submitted_at: new Date().toISOString(),
       },
@@ -65,6 +86,7 @@ export function TaskSubmissionForm({
       setSuccess("✅ Oppgaven er sendt inn!");
       setTaskId(null);
       setMedia(null);
+      setPreviewUrl(null);
 
       refreshSubmissions();
       refreshTasks();
@@ -107,11 +129,11 @@ export function TaskSubmissionForm({
 
       {/* File upload */}
       <div className="mt-4">
-        <label className="block font-medium text-gray-700">Last opp bilde:</label>
+        <label className="block font-medium text-gray-700">Last opp bilde eller video:</label>
         <input
           type="file"
-          accept="image/*"
-          onChange={(e) => setMedia(e.target.files?.[0] || null)}
+          accept="image/*,video/*" // ✅ Allow images & videos
+          onChange={handleMediaChange}
           className="hidden"
           id="file-upload"
         />
@@ -119,9 +141,21 @@ export function TaskSubmissionForm({
           htmlFor="file-upload"
           className="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-900 text-center font-medium py-2 px-4 rounded-md block mt-2"
         >
-          📷 Velg bilde
+          📷📹 Velg fil
         </label>
-        {media && <p className="text-sm text-gray-600 mt-1">🖼️ {media.name}</p>}
+
+        {/* Media preview */}
+        {previewUrl && (
+          <div className="mt-3 flex justify-center">
+            {media?.type.startsWith("image") ? (
+              <img src={previewUrl} alt="Preview" className="rounded-lg max-w-full max-h-60" />
+            ) : (
+              <video controls className="rounded-lg max-w-full max-h-60">
+                <source src={previewUrl} type={media?.type} />
+              </video>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Submit button */}
