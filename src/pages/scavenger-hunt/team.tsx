@@ -135,18 +135,18 @@ export default function TeamPage() {
     // ✅ Generate a system message
     const systemMessage =
       status === "approved"
-        ? `✅ Task **"${taskTitle}"** has been **approved** with **${finalPoints} points**! 🎉`
-        : `❌ Task **"${taskTitle}"** has been **rejected**. ${comment ? `Reason: ${comment}` : ""}`;
+        ? `✅ Task"${taskTitle}" has been approved with ${finalPoints} points! 🎉`
+        : `❌ Task "${taskTitle}" has been rejected. ${comment ? `Reason: ${comment}` : ""}`;
 
     // ✅ Insert system post in scavenger_feed
     const { error: feedError } = await supabase.from("scavenger_feed").insert([
       {
         team_id: submission.team_id,
         user_id: null, // System message, no user
-        username: "System",
+        username: "Dommer",
         content: systemMessage,
         media_urls: submission.media_url ? [submission.media_url] : [],
-        type: "system", // ✅ Mark as system-generated
+        type: "system",
         created_at: new Date().toISOString(),
       },
     ]);

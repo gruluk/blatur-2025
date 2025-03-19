@@ -76,9 +76,6 @@ export default function ScavengerFeed({ teamId }: { teamId: string }) {
                 })}
               </div>
             )}
-
-            {/* 🔥 System Messages for Submission Updates */}
-            {item.type === "system" && <p className="mt-2 italic text-gray-600">📢 {item.content}</p>}
           </div>
         ))}
 
