@@ -106,10 +106,25 @@ export default function PostPage() {
   useEffect(() => {
     async function fetchPost() {
       if (!id) return;
-      const { data } = await supabase.from("posts").select("*").eq("id", id).single();
+
+      const { data, error } = await supabase.from("posts").select("*").eq("id", id).single();
+      if (error) {
+        console.error("❌ Error fetching post:", error);
+        return;
+      }
 
       if (data) {
-        setPost(data);
+        // Ensure URLs are properly formatted
+        const updatedImages = (data.image_urls || []).map((url: string) =>
+          url.startsWith("http") ? url : supabase.storage.from("uploads").getPublicUrl(url).data.publicUrl
+        );
+
+        const updatedVideos = (data.video_urls || []).map((url: string) =>
+          url.startsWith("http") ? url : supabase.storage.from("uploads").getPublicUrl(url).data.publicUrl
+        );
+
+        setPost({ ...data, image_urls: updatedImages, video_urls: updatedVideos });
+
         const avatar = await fetchUserAvatar(data.user_id);
         setUserAvatar(avatar);
       }
@@ -156,27 +171,29 @@ export default function PostPage() {
             <p className="whitespace-pre-wrap">{post?.content ? formatPostContent(post.content) : ""}</p>
 
             {/* Display images & videos */}
-            {post?.image_urls?.map((url, index) => (
-              <Image
-                key={index}
-                src={url}
-                alt="Post Image"
-                width={600}
-                height={400}
-                className="rounded-lg max-w-full mt-2 cursor-pointer"
-                onClick={() => setFullscreenMedia({ url, type: "image" })}
-              />
-            ))}
-            {post?.video_urls?.map((url, index) => (
-              <video
-                key={index}
-                controls
-                className="rounded-lg max-w-full mt-2 cursor-pointer"
-                onClick={() => setFullscreenMedia({ url, type: "video" })} // 🔥 Open in fullscreen
-              >
-                <source src={url} type="video/mp4" />
-              </video>
-            ))}
+            <div className="mt-4 flex flex-col items-center">
+              {post?.image_urls?.map((url, index) => (
+                <img
+                  key={index}
+                  src={url}
+                  alt="Post Image"
+                  className="rounded-lg max-w-full mt-2 cursor-pointer"
+                  onClick={() => setFullscreenMedia({ url, type: "image" })}
+                />
+              ))}
+
+              {post?.video_urls?.map((url, index) => (
+                <video
+                  key={index}
+                  controls
+                  className="rounded-lg max-w-full mt-2 cursor-pointer"
+                  onClick={() => setFullscreenMedia({ url, type: "video" })}
+                >
+                  <source src={url} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              ))}
+            </div>
           </>
         )}
       </div>

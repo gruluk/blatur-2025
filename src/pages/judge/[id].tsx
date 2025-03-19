@@ -66,6 +66,13 @@ export default function JudgeReview() {
   async function updateSubmission(status: "approved" | "rejected", reason: string) {
     if (!submission) return;
 
+    const isVideo = submission.proof_url ? /\.(mp4|webm|ogg)$/i.test(submission.proof_url) : false;
+    const imageUrls = submission.proof_url && !isVideo ? [submission.proof_url] : [];
+    const videoUrls = isVideo ? [submission.proof_url] : [];
+
+    console.log("📷 Image URLs:", imageUrls);
+    console.log("🎥 Video URLs:", videoUrls);
+
     const { error: updateError } = await supabase
       .from("submissions")
       .update({ status })
@@ -77,9 +84,9 @@ export default function JudgeReview() {
     }
 
     if (status === "approved") {
-      const totalPoints = submission.achievements.points + bonusPoints; // 🎖️ Include bonus
+      const totalPoints = submission.achievements.points + bonusPoints;
 
-      // ✅ Insert into `scores` table
+      // ✅ Insert into `scores`
       const { error: scoreError } = await supabase.from("scores").insert([
         {
           user_id: submission.user_id,
@@ -96,22 +103,16 @@ export default function JudgeReview() {
 
       // ✅ Create a feed post announcing the achievement
       let postContent = `🎉 ${submission.user.name} just earned +${totalPoints} points for completing "${submission.achievements.title}"!`;
-
-      if (bonusPoints > 0) {
-        postContent += ` (Includes +${bonusPoints} bonus points) 🎖️`;
-      }
-
-      if (reason) {
-        postContent += `\n\n📝 Judge's Comment: "${reason}"`;
-      }
+      if (bonusPoints > 0) postContent += ` (Includes +${bonusPoints} bonus points) 🎖️`;
+      if (reason) postContent += `\n\n📝 Judge's Comment: "${reason}"`;
 
       const { error: postError } = await supabase.from("posts").insert([
         {
           user_id: submission.user_id,
           username: submission.user.name,
           content: postContent,
-          image_urls: submission.proof_url ? [submission.proof_url] : [],
-          video_urls: [],
+          image_urls: imageUrls,
+          video_urls: videoUrls,
           is_announcement: false,
           event_type: "Achievement",
         },
@@ -121,49 +122,8 @@ export default function JudgeReview() {
         console.error("❌ Error creating feed post:", postError);
         return;
       }
-    } else if (status === "rejected") {
-      // ✅ Remove the score if it was previously approved
-      const { error: deleteScoreError } = await supabase
-        .from("scores")
-        .delete()
-        .eq("user_id", submission.user_id)
-        .eq("event_id", submission.achievement_id)
-        .eq("event_type", "Achievement");
-
-      if (deleteScoreError) {
-        console.error("❌ Error deleting score:", deleteScoreError);
-        return;
-      }
-
-      // ✅ Improved Formatting for Feed Post
-      let postContent = `❌ ${submission.user.name}'s achievement "${submission.achievements.title}" has been revoked.`;
-
-      if (submission.submission_text) {
-        postContent += `\n\n📝 Submission: "${submission.submission_text}"`;
-      }
-
-      if (reason) {
-        postContent += `\n\n🗒 Judge's Comment: "${reason}"`;
-      }
-
-      const { error: revokePostError } = await supabase.from("posts").insert([
-        {
-          user_id: submission.user_id,
-          username: submission.user.name,
-          content: postContent,
-          image_urls: submission.proof_url ? [submission.proof_url] : [],
-          video_urls: submission.proof_url?.endsWith(".mp4") ? [submission.proof_url] : [],
-          is_announcement: false,
-          event_type: "Achievement Revoked",
-        },
-      ]);
-
-      if (revokePostError) {
-        console.error("❌ Error creating revocation post:", revokePostError);
-        return;
-      }
     }
-
+    
     alert(`✅ Submission ${status.toUpperCase()}!`);
     router.push("/judge");
   }
