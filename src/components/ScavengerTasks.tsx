@@ -22,7 +22,7 @@ export default function ScavengerTasks() {
   }, []);
 
   async function addTask() {
-    if (!newTask.title) return alert("Task title cannot be empty!");
+    if (!newTask.title.trim()) return alert("Task title cannot be empty!");
     const { data, error } = await supabase.from("scavenger_tasks").insert([newTask]).select("*");
     if (error) return console.error("🚨 Error adding task:", error);
     if (data) setTasks([...tasks, data[0]]);
@@ -49,13 +49,18 @@ export default function ScavengerTasks() {
   }
 
   return (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2">📜 Task List</h3>
-      <div className="flex gap-2">
+    <div className="p-4 bg-gray-100 rounded-lg shadow-lg max-w-3xl mx-auto">
+      {/* Header */}
+      <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        📜 Scavenger Tasks
+      </h3>
+
+      {/* Task Form */}
+      <div className="flex flex-col sm:flex-row gap-3">
         {/* Title Input */}
         <input
           type="text"
-          className="border p-2 rounded w-full"
+          className="flex-1 border border-gray-300 p-2 rounded-md shadow-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
           placeholder="Task Title"
           value={editingTask ? editingTask.title : newTask.title}
           onChange={(e) =>
@@ -68,7 +73,7 @@ export default function ScavengerTasks() {
         {/* Points Input */}
         <input
           type="number"
-          className="border p-2 rounded w-20"
+          className="w-24 text-black border border-gray-300 p-2 rounded-md shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
           min="1"
           value={editingTask ? editingTask.points : newTask.points}
           onChange={(e) =>
@@ -79,19 +84,44 @@ export default function ScavengerTasks() {
         />
 
         {/* Add/Update Button */}
-        <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={editingTask ? updateTask : addTask}>
+        <button
+          className={`px-4 py-2 font-bold text-white rounded-md shadow-md transition ${
+            editingTask
+              ? "bg-yellow-500 hover:bg-yellow-600"
+              : "bg-green-500 hover:bg-green-600"
+          }`}
+          onClick={editingTask ? updateTask : addTask}
+        >
           {editingTask ? "✏️ Update" : "➕ Add"}
         </button>
       </div>
 
       {/* Task List */}
-      <ul className="mt-4">
+      <ul className="mt-6 space-y-3">
         {tasks.map((task) => (
-          <li key={task.id} className="flex justify-between p-2 bg-white text-onlineBlue rounded mt-2">
-            <span>{task.title} - {task.points} pts</span>
-            <div>
-              <button className="bg-blue-500 px-3 py-1 rounded mr-2" onClick={() => setEditingTask(task)}>✏️</button>
-              <button className="bg-red-500 px-3 py-1 rounded" onClick={() => deleteTask(task.id)}>❌</button>
+          <li
+            key={task.id}
+            className="p-3 bg-white shadow-md rounded-md border border-gray-300 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-3"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 w-full">
+              <p className="text-lg font-semibold text-gray-800">{task.title}</p>
+              <p className="text-sm text-gray-500">⭐ {task.points} points</p>
+            </div>
+
+            {/* Buttons (Stacked on mobile, horizontal on desktop) */}
+            <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2">
+              <button
+                className="w-full sm:w-auto px-4 py-2 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition shadow-md"
+                onClick={() => setEditingTask(task)}
+              >
+                ✏️ Edit
+              </button>
+              <button
+                className="w-full sm:w-auto px-4 py-2 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition shadow-md"
+                onClick={() => deleteTask(task.id)}
+              >
+                ❌ Delete
+              </button>
             </div>
           </li>
         ))}

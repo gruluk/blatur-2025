@@ -108,48 +108,69 @@ export default function ScavengerTeams() {
   }
 
   return (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2">👥 Team Management</h3>
+    <div className="p-4 mt-5 bg-gray-100 rounded-lg shadow-lg max-w-3xl mx-auto">
+      {/* Header */}
+      <h3 className="text-2xl font-bold text-gray-800 mb-4">👥 Team Management</h3>
 
       {/* ➕ Add/Edit Team */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
-          className="border p-2 rounded w-full"
+          className="flex-1 border text-black border-gray-300 p-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           placeholder="Team Name"
           value={editingTeam ? editingTeam.name : newTeam.name}
           onChange={(e) =>
             editingTeam ? setEditingTeam({ ...editingTeam, name: e.target.value }) : setNewTeam({ ...newTeam, name: e.target.value })
           }
         />
-        <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={editingTeam ? updateTeam : addTeam}>
+        <button
+          className={`px-4 py-2 font-bold text-white rounded-md shadow-md transition ${
+            editingTeam ? "bg-yellow-500 hover:bg-yellow-600" : "bg-green-500 hover:bg-green-600"
+          }`}
+          onClick={editingTeam ? updateTeam : addTeam}
+        >
           {editingTeam ? "✏️ Update" : "➕ Add"}
         </button>
       </div>
 
       {/* 🔥 Team List */}
-      <ul className="mt-4">
+      <ul className="mt-6 space-y-4">
         {teams.map((team) => (
-          <li key={team.id} className="p-2 bg-white text-onlineBlue mt-5 rounded">
-            <div className="flex justify-between">
-              <span>{team.name}</span>
-              <div>
-                <button className="bg-blue-500 px-3 py-1 rounded mr-2" onClick={() => setEditingTeam(team)}>✏️</button>
-                <button className="bg-red-500 px-3 py-1 rounded" onClick={() => deleteTeam(team.id)}>❌</button>
+          <li key={team.id} className="bg-white shadow-md rounded-lg border border-gray-300 p-4">
+            {/* Team Name & Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <h4 className="text-lg font-semibold text-gray-800">{team.name}</h4>
+
+              <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
+                <button
+                  className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition shadow-md w-full sm:w-auto"
+                  onClick={() => setEditingTeam(team)}
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md transition shadow-md w-full sm:w-auto"
+                  onClick={() => deleteTeam(team.id)}
+                >
+                  ❌ Delete
+                </button>
               </div>
             </div>
 
             {/* 📌 List of Team Members */}
-            <ul className="mt-2 bg-gray-200 p-2 rounded">
+            <ul className="mt-3 bg-gray-100 p-3 rounded-md">
               {team.members.length === 0 ? (
-                <p className="text-gray-400">No members yet</p>
+                <p className="text-gray-500 text-sm">No members yet</p>
               ) : (
                 team.members.map((memberId) => {
                   const user = users.find((u) => u.id === memberId);
                   return (
-                    <li key={memberId} className="flex justify-between p-1">
-                      <span>{user ? `${user.firstName} ${user.lastName}` : "Unknown User"}</span>
-                      <button className="bg-red-500 px-2 py-1 rounded" onClick={() => removeUserFromTeam(team.id, memberId)}>
+                    <li key={memberId} className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm mt-1">
+                      <span className="text-gray-800">{user ? `${user.firstName} ${user.lastName}` : "Unknown User"}</span>
+                      <button
+                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md transition shadow-sm text-xs sm:text-sm"
+                        onClick={() => removeUserFromTeam(team.id, memberId)}
+                      >
                         ❌ Remove
                       </button>
                     </li>
@@ -162,10 +183,10 @@ export default function ScavengerTeams() {
       </ul>
 
       {/* ➕ Add User to Team */}
-      <h3 className="text-lg font-semibold mt-4">➕ Add User to Team</h3>
-      <div className="flex gap-2">
+      <h3 className="text-xl text-black font-semibold mt-6">➕ Add User to Team</h3>
+      <div className="flex flex-col sm:flex-row gap-3 mt-3">
         <select
-          className="border p-2 rounded w-full"
+          className="flex-1 text-black border border-gray-300 p-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           value={selectedUser || ""}
           onChange={(e) => setSelectedUser(e.target.value)}
         >
@@ -178,7 +199,7 @@ export default function ScavengerTeams() {
         </select>
 
         <select
-          className="border p-2 rounded w-full"
+          className="flex-1 text-black border border-gray-300 p-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           value={selectedTeam || ""}
           onChange={(e) => setSelectedTeam(e.target.value)}
         >
@@ -190,7 +211,10 @@ export default function ScavengerTeams() {
           ))}
         </select>
 
-        <button className="bg-green-500 px-4 py-2 text-white rounded" onClick={addUserToTeam}>
+        <button
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition shadow-md w-full sm:w-auto"
+          onClick={addUserToTeam}
+        >
           ➕ Add
         </button>
       </div>
