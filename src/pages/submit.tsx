@@ -21,7 +21,8 @@ export default function Submit() {
   const router = useRouter();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [submissionStatus, setSubmissionStatus] = useState<Record<string, string>>({});
-  const [totalPoints, setTotalPoints] = useState<number>(0); // ✅ Track total points
+  const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [isScavengerHuntLive, setIsScavengerHuntLive] = useState<boolean>(false); // ✅ Track event status
 
   useEffect(() => {
     async function fetchAchievements() {
@@ -41,7 +42,7 @@ export default function Submit() {
       else {
         const statusMap: Record<string, string> = {};
         data.forEach((sub: Submission) => {
-          statusMap[sub.achievement_id] = sub.status; // "pending" or "approved"
+          statusMap[sub.achievement_id] = sub.status;
         });
         setSubmissionStatus(statusMap);
       }
@@ -51,7 +52,6 @@ export default function Submit() {
       if (!user) return;
 
       try {
-        // ✅ Fetch Achievement Points from `scores`
         const { data: scoreData, error: scoreError } = await supabase
           .from("scores")
           .select("points")
@@ -61,7 +61,6 @@ export default function Submit() {
 
         const totalScorePoints = scoreData.reduce((sum, entry) => sum + entry.points, 0);
 
-        // ✅ Fetch Bonus Points from `bonus_points`
         const { data: bonusData, error: bonusError } = await supabase
           .from("bonus_points")
           .select("points")
@@ -70,26 +69,47 @@ export default function Submit() {
         if (bonusError) throw bonusError;
 
         const totalBonusPoints = bonusData.reduce((sum, entry) => sum + entry.points, 0);
-
-        // ✅ Calculate Total (Achievements + Bonus Points)
-        const total = totalScorePoints + totalBonusPoints;
-
-        setTotalPoints(total);
+        setTotalPoints(totalScorePoints + totalBonusPoints);
       } catch (error) {
         console.error("❌ Error fetching total points:", error);
       }
     }
 
+    async function fetchScavengerHuntStatus() {
+      const { data, error } = await supabase
+        .from("scavenger_events")
+        .select("status")
+        .single(); // ✅ Assuming there’s only one event
+
+      if (error) {
+        console.error("❌ Error fetching scavenger hunt status:", error);
+      } else {
+        setIsScavengerHuntLive(data?.status === "live");
+      }
+    }
+
     fetchAchievements();
     fetchUserSubmissions();
-    fetchTotalPoints(); // ✅ Fetch total points
+    fetchTotalPoints();
+    fetchScavengerHuntStatus(); // ✅ Check scavenger hunt event status
   }, [user]);
 
   return (
     <div className="min-h-screen bg-onlineBlue text-white p-6 mt-15">
       <Header />
       <div className="min-h-screen text-white flex flex-col items-center">
-        <h1 className="text-3xl font-bold mb-4">Achievements</h1>
+        
+        {/* 🔥 Scavenger Hunt Card (Only Visible When Live) */}
+        {isScavengerHuntLive && (
+          <div
+            className="w-full max-w-lg p-4 bg-yellow-500 text-black font-bold rounded-lg text-center cursor-pointer hover:bg-yellow-400"
+            onClick={() => router.push("/scavenger-hunt/team")}
+          >
+            🏆 The Scavenger Hunt is LIVE! Click here to join your team!
+          </div>
+        )}
+
+        <h1 className="text-3xl font-bold mt-6 mb-4">Achievements</h1>
         
         {/* 🔥 Display User’s Total Points */}
         <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p> {/* ✅ Show total score */}
@@ -107,13 +127,11 @@ export default function Submit() {
                 className="w-full px-6 py-3 bg-white text-onlineBlue font-bold rounded-lg flex justify-between items-center"
                 onClick={() => router.push(`/achievement/${achievement.id}`)}
               >
-                {/* 🏆 Achievement Title & Points (Left) */}
                 <div className="text-left">
                   <p>{achievement.title}</p>
                   <p className="text-sm text-gray-600">{achievement.points} pts</p>
                 </div>
 
-                {/* ✅ Status (Right) */}
                 <div className="text-right font-semibold">
                   {isCompleted ? (
                     <span className="text-green-600">✅ Done</span>
