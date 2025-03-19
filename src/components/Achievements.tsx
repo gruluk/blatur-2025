@@ -42,19 +42,6 @@ export default function Achievements({ achievements, setAchievements }: Props) {
             <h2 className="text-lg font-bold">{achievement.title}</h2>
             <p className="text-gray-600">{achievement.description}</p>
             <p className="text-gray-500">🏆 {achievement.points} Points</p>
-
-            {/* 🔥 Show Achievement Status */}
-            <p
-              className={`mt-2 text-sm font-semibold px-3 py-1 inline-block rounded-md ${
-                achievement.status === "approved"
-                  ? "bg-green-200 text-green-800"
-                  : achievement.status === "pending"
-                  ? "bg-yellow-200 text-yellow-800"
-                  : "bg-red-200 text-red-800"
-              }`}
-            >
-              {achievement.status === "approved" ? "✅ Approved" : achievement.status === "pending" ? "⏳ Pending" : "❌ Rejected"}
-            </p>
           </div>
         </Link>
       ))}

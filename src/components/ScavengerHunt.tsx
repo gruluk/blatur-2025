@@ -68,7 +68,7 @@ export default function ScavengerHunt() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-center mb-4">🏆 Scavenger Hunt</h1>
+      <h1 className="text-2xl font-bold text-center mb-4 mt-5">🏆 Scavenger Hunt</h1>
 
       {/* ✅ Judges Only: Toggle Button */}
       {isAdmin && (
