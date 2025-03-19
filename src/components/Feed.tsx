@@ -7,6 +7,7 @@ import Link from "next/link";
 import { formatRelativeTime } from "@/utils/time";
 import FullscreenMediaViewer from "@/components/FullscreenMediaViewer";
 import Image from "next/image";
+import ScavengerHuntCard from "./ScavengerHuntCard";
 
 type FeedItem = {
   is_announcement: boolean;
@@ -139,6 +140,7 @@ export default function Feed() {
   return (
     <TabsContent value="feed">
       <div className="mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
+        <ScavengerHuntCard />
         <PostForm onPostCreated={() => fetchFeed(0)} />
         {feed.map((item, index) => (
           <div

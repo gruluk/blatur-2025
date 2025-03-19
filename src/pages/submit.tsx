@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useUser } from "@clerk/nextjs";
 import { supabase } from "../../supabase";
 import Header from "@/components/Header";
+import ScavengerHuntCard from "@/components/ScavengerHuntCard";
 
 type Achievement = {
   id: string;
@@ -99,25 +100,17 @@ export default function Submit() {
       <Header />
       <div className="min-h-screen text-white flex flex-col items-center">
         
-        {/* 🔥 Scavenger Hunt Card (Only Visible When Live) */}
-        {isScavengerHuntLive && (
-          <div
-            className="w-full max-w-lg p-4 bg-yellow-500 text-black font-bold rounded-lg text-center cursor-pointer hover:bg-yellow-400"
-            onClick={() => router.push("/scavenger-hunt/team")}
-          >
-            🏆 The Scavenger Hunt is LIVE! Click here to join your team!
-          </div>
-        )}
+        {/* ✅ Use Scavenger Hunt Card */}
+        <ScavengerHuntCard />
 
         <h1 className="text-3xl font-bold mt-6 mb-4">Achievements</h1>
-        
-        {/* 🔥 Display User’s Total Points */}
-        <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p> {/* ✅ Show total score */}
+
+        <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p>
 
         {/* 🔥 List of Achievements */}
         <div className="w-full max-w-lg space-y-3">
           {achievements.map((achievement) => {
-            const status = submissionStatus[achievement.id] || "not-done"; // Default: Not Done
+            const status = submissionStatus[achievement.id] || "not-done";
             const isPending = status === "pending";
             const isCompleted = status === "approved";
 
