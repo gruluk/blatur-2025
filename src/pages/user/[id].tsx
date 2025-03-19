@@ -35,6 +35,9 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [totalPoints, setTotalPoints] = useState<number>(0);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreEntry[]>([]);
+  const [isScavengerHuntLive, setIsScavengerHuntLive] = useState(false);
+  const [userScavengerTeam, setUserScavengerTeam] = useState<string | null>(null);
+  const [teamScavengerPoints, setTeamScavengerPoints] = useState<number>(0);
 
   useEffect(() => {
     if (!id) return;
@@ -53,7 +56,6 @@ export default function UserProfile() {
 
     async function fetchUserScores() {
       try {
-        // ✅ Fetch approved submissions first
         const { data: submissions, error: submissionsError } = await supabase
           .from("submissions")
           .select("id, achievement_id, status, proof_url, submission_text, created_at")
@@ -63,24 +65,20 @@ export default function UserProfile() {
 
         if (submissionsError) throw submissionsError;
 
-        // ✅ Extract achievement IDs
         const achievementIds = submissions.map((sub) => sub.achievement_id);
 
-        // ✅ Fetch related scores from `scores` table using achievement IDs
         const { data: submissionScores, error: scoresError } = await supabase
           .from("scores")
           .select("event_id, points")
-          .in("event_id", achievementIds) // ✅ Use achievement IDs, not submission IDs
-          .eq("event_type", "Achievement"); // ✅ Match event_type correctly
+          .in("event_id", achievementIds)
+          .eq("event_type", "Achievement");
 
         if (scoresError) throw scoresError;
 
-        // ✅ Create a map of event_id -> points
         const scoreMap = Object.fromEntries(
           submissionScores.map((score) => [score.event_id, score.points])
         );
 
-        // ✅ Fetch achievement titles
         const { data: achievements, error: achievementsError } = await supabase
           .from("achievements")
           .select("id, title")
@@ -94,18 +92,17 @@ export default function UserProfile() {
 
         const { data: bonusPoints, error: bonusPointsError } = await supabase
           .from("bonus_points")
-          .select("id, points, granted_at, reason, proof_url") // ✅ Include reason & proof_url
+          .select("id, points, granted_at, reason, proof_url")
           .eq("user_id", id)
           .order("granted_at", { ascending: false });
 
         if (bonusPointsError) throw bonusPointsError;
 
-        // ✅ Format Submissions (Achievements)
         const formattedSubmissions = submissions.map((sub) => ({
           id: sub.id,
           event_type: "Achievement",
           event_id: sub.achievement_id,
-          points: scoreMap[sub.achievement_id] || 0, // ✅ Fetch points from `scores`
+          points: scoreMap[sub.achievement_id] || 0,
           created_at: sub.created_at,
           achievement_title: achievementMap[sub.achievement_id] || "Unknown Achievement",
           proof_url: sub.proof_url,
@@ -113,7 +110,6 @@ export default function UserProfile() {
           status: sub.status,
         }));
 
-        // ✅ Format Bonus Points to Include Reason & Proof Image
         const formattedBonusPoints = bonusPoints.map((bonus) => ({
           id: bonus.id,
           event_type: "Bonus Points",
@@ -121,20 +117,17 @@ export default function UserProfile() {
           points: bonus.points,
           created_at: bonus.granted_at,
           achievement_title: "Bonus Points",
-          proof_url: bonus.proof_url || null, // ✅ Ensure proof_url is included
-          submission_text: bonus.reason || null, // ✅ Store reason under submission_text for display
+          proof_url: bonus.proof_url || null,
+          submission_text: bonus.reason || null,
           status: "approved",
         }));
 
-        // ✅ Merge Both Lists & Sort by Date
         const allEntries = [...formattedSubmissions, ...formattedBonusPoints].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
-        // ✅ Calculate total points correctly
         const total = allEntries.reduce((sum, entry) => sum + entry.points, 0);
 
-        // ✅ Update State
         setScoreBreakdown(allEntries);
         setTotalPoints(total);
       } catch (error) {
@@ -144,8 +137,78 @@ export default function UserProfile() {
       }
     }
 
-    fetchUserData();
-    fetchUserScores();
+    async function fetchScavengerHuntStatus() {
+      try {
+        const { data, error } = await supabase
+          .from("scavenger_events")
+          .select("status")
+          .single();
+
+        if (error) {
+          console.error("❌ Error fetching scavenger hunt status:", error);
+          return;
+        }
+
+        const isLive = data?.status === "live";
+        setIsScavengerHuntLive(isLive);
+
+        if (isLive) {
+          await fetchUserScavengerTeam();
+        }
+      } catch (error) {
+        console.error("❌ Error fetching scavenger hunt status:", error);
+      }
+    }
+
+    async function fetchUserScavengerTeam() {
+      try {
+        const { data, error } = await supabase
+          .from("scavenger_teams")
+          .select("id, name")
+          .filter("members", "cs", JSON.stringify([id]))
+          .single();
+
+        if (error || !data) {
+          console.warn("⚠️ User is not part of any team.");
+          setUserScavengerTeam("Not participating in the scavenger hunt");
+          setTeamScavengerPoints(null); // No points if not in a team
+          return;
+        }
+
+        setUserScavengerTeam(data.name);
+        await fetchTeamScavengerPoints(data.id);
+      } catch (error) {
+        console.error("❌ Error fetching user's team:", error);
+      }
+    }
+
+    async function fetchTeamScavengerPoints(teamId: string) {
+      try {
+        const { data, error } = await supabase
+          .from("scavenger_submissions")
+          .select("points_awarded")
+          .eq("team_id", teamId)
+          .eq("status", "approved");
+
+        if (error) {
+          console.error("❌ Error fetching team points:", error);
+          return;
+        }
+
+        const totalPoints = data.reduce((sum, entry) => sum + (entry.points_awarded || 0), 0);
+        setTeamScavengerPoints(totalPoints);
+      } catch (error) {
+        console.error("❌ Error fetching team points:", error);
+      }
+    }
+
+    async function fetchAllData() {
+      await fetchUserData();
+      await fetchUserScores();
+      await fetchScavengerHuntStatus();
+    }
+
+    fetchAllData();
   }, [id]);
 
   
@@ -193,6 +256,15 @@ export default function UserProfile() {
 
         {/* 🔥 User Details */}
         <h1 className="text-2xl font-bold">{user.firstName || "Unknown"} {user.lastName || ""}</h1>
+
+        {/* ✅ Scavenger Hunt Team & Points (Only if live) */}
+        {isScavengerHuntLive && userScavengerTeam && (
+          <div className="mt-6 w-full text-center bg-yellow-100 p-4 rounded-lg shadow-md">
+            <h3 className="text-xl font-bold text-onlineBlue">Rebus</h3>
+            <p className="text-lg font-semibold text-gray-800">🏅 Team: {userScavengerTeam}</p>
+            <p className="text-lg text-gray-700">🏆 Rebus Poeng: {teamScavengerPoints}</p>
+          </div>
+        )}
 
         {/* 🏆 Total Points */}
         <p className="text-lg font-bold mt-4">🏆 Total Points: {totalPoints}</p>
