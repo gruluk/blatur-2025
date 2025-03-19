@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../supabase";
 import { ScavengerTask, ScavengerSubmission, ScavengerTeam } from "@/types";
 
@@ -14,11 +14,11 @@ export function TaskSubmissionForm({
   refreshTasks: () => void;
 }) {
   const [taskId, setTaskId] = useState<string | null>(null);
-  const [media, setMedia] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [submissions, setSubmissions] = useState<ScavengerSubmission[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     async function fetchSubmissions() {
@@ -28,52 +28,52 @@ export function TaskSubmissionForm({
     fetchSubmissions();
   }, [selectedTeam]);
 
-  function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] || null;
-    if (!file) return;
-
-    // Validate file type (only allow images and videos)
-    const validTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "video/ogg"];
-    if (!validTypes.includes(file.type)) {
-      setError("Ugyldig filtype! Bare bilder og videoer er tillatt.");
-      setMedia(null);
-      setPreviewUrl(null);
-      return;
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
     }
-
-    setError(null);
-    setMedia(file);
-    setPreviewUrl(URL.createObjectURL(file)); // ✅ Show preview before upload
   }
 
   async function handleSubmit() {
-    if (!taskId || !media) {
-      setError("Velg en oppgave og last opp et bilde eller video!");
+    if (!taskId || files.length === 0) {
+      setError("Velg en oppgave og last opp minst én fil!");
       return;
     }
 
     setError(null);
     setSuccess(null);
+    setIsUploading(true);
 
-    const fileExtension = media.name.split(".").pop();
-    const filePath = `${selectedTeam.id}/${taskId}-${Date.now()}.${fileExtension}`;
-    const { error: uploadError } = await supabase.storage.from("scavenger-feed").upload(filePath, media);
+    const uploadedImageUrls: string[] = [];
+    const uploadedVideoUrls: string[] = [];
 
-    if (uploadError) {
-      console.error("❌ Upload error:", uploadError);
-      setError("Kunne ikke laste opp filen. Prøv igjen.");
-      return;
+    // 🔥 Upload each file
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${selectedTeam.id}/${taskId}-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      const { error } = await supabase.storage.from("scavenger-feed").upload(filePath, file);
+
+      if (error) {
+        console.error("❌ Upload error:", error);
+        setError("Kunne ikke laste opp filene. Prøv igjen.");
+        setIsUploading(false);
+        return;
+      }
+
+      const { publicUrl } = supabase.storage.from("scavenger-feed").getPublicUrl(filePath).data;
+
+      if (file.type.startsWith("image")) uploadedImageUrls.push(publicUrl);
+      if (file.type.startsWith("video")) uploadedVideoUrls.push(publicUrl);
     }
 
-    const { data } = supabase.storage.from("scavenger-feed").getPublicUrl(filePath);
-    const publicUrl = data.publicUrl;
-
+    // 🔥 Insert submission into DB
     const { error: submissionError } = await supabase.from("scavenger_submissions").insert([
       {
         task_id: taskId,
         team_id: selectedTeam.id,
-        media_url: publicUrl,
-        media_type: media.type.startsWith("image") ? "image" : "video", // ✅ Store media type
+        image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
+        video_urls: uploadedVideoUrls.length > 0 ? uploadedVideoUrls : [],
         status: "pending",
         submitted_at: new Date().toISOString(),
       },
@@ -85,12 +85,12 @@ export function TaskSubmissionForm({
     } else {
       setSuccess("✅ Oppgaven er sendt inn!");
       setTaskId(null);
-      setMedia(null);
-      setPreviewUrl(null);
-
+      setFiles([]);
       refreshSubmissions();
       refreshTasks();
     }
+
+    setIsUploading(false);
   }
 
   function isRejected(taskId: string) {
@@ -129,31 +129,30 @@ export function TaskSubmissionForm({
 
       {/* File upload */}
       <div className="mt-4">
-        <label className="block font-medium text-gray-700">Last opp bilde eller video:</label>
+        <label className="block font-medium text-gray-700">Last opp bilder eller videoer:</label>
         <input
-          type="file"
-          accept="image/*,video/*" // ✅ Allow images & videos
-          onChange={handleMediaChange}
-          className="hidden"
           id="file-upload"
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
         />
         <label
           htmlFor="file-upload"
           className="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-900 text-center font-medium py-2 px-4 rounded-md block mt-2"
         >
-          📷📹 Velg fil
+          📷📹 Velg filer
         </label>
 
-        {/* Media preview */}
-        {previewUrl && (
-          <div className="mt-3 flex justify-center">
-            {media?.type.startsWith("image") ? (
-              <img src={previewUrl} alt="Preview" className="rounded-lg max-w-full max-h-60" />
-            ) : (
-              <video controls className="rounded-lg max-w-full max-h-60">
-                <source src={previewUrl} type={media?.type} />
-              </video>
-            )}
+        {/* Show selected files */}
+        {files.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {files.map((file, index) => (
+              <div key={index} className="text-sm text-gray-600">
+                {file.name}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -161,12 +160,12 @@ export function TaskSubmissionForm({
       {/* Submit button */}
       <button
         className={`w-full mt-4 py-2 rounded font-semibold text-white ${
-          taskId && media ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-400 cursor-not-allowed"
+          taskId && files.length > 0 ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-400 cursor-not-allowed"
         }`}
         onClick={handleSubmit}
-        disabled={!taskId || !media}
+        disabled={!taskId || files.length === 0 || isUploading}
       >
-        Send inn
+        {isUploading ? "Laster opp..." : "Send inn"}
       </button>
     </div>
   );
