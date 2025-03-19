@@ -96,49 +96,50 @@ export default function Submit() {
   }, [user]);
 
     return (
-    <div className="min-h-screen bg-onlineBlue text-white p-6 mt-15">
-      <Header />
-      <div className="min-h-screen text-white flex flex-col items-center">
+      <div className="min-h-screen bg-onlineBlue text-white p-6 mt-15">
+        <Header />
+        <div className="min-h-screen text-white flex flex-col items-center">
 
-        {/* ✅ Show Scavenger Hunt Card only if live */}
-        {isScavengerHuntLive && <ScavengerHuntCard />}
+          {/* ✅ Show Scavenger Hunt Card only if live */}
+          {isScavengerHuntLive && <ScavengerHuntCard />}
 
-        <h1 className="text-3xl font-bold mt-6 mb-4">Achievements</h1>
+          <h1 className="text-3xl font-bold mt-6 mb-4">Achievements</h1>
 
-        <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p>
+          <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p>
 
-        {/* 🔥 List of Achievements */}
-        <div className="w-full max-w-lg space-y-3">
-          {achievements.map((achievement) => {
-            const status = submissionStatus[achievement.id] || "not-done";
-            const isPending = status === "pending";
-            const isCompleted = status === "approved";
+          {/* 🔥 List of Achievements */}
+          <div className="w-full max-w-lg space-y-3">
+            {achievements.map((achievement) => {
+              const status = submissionStatus[achievement.id] || "not-done";
+              const isPending = status === "pending";
+              const isCompleted = status === "approved";
 
-            return (
-              <button
-                key={achievement.id}
-                className="w-full px-6 py-3 font-bold bg-white text-onlineBlue rounded-lg flex justify-between items-center"
-                onClick={() => router.push(`/achievement/${achievement.id}`)} // ✅ Always clickable
-              >
-                <div className="text-left">
+              return (
+                <button
+                  key={achievement.id}
+                  className="w-full px-6 py-3 font-bold bg-white text-onlineBlue rounded-lg flex flex-col text-left"
+                  onClick={() => router.push(`/achievement/${achievement.id}`)} // ✅ Always clickable
+                >
                   <p>{achievement.title}</p>
                   <p className="text-sm text-gray-600">{achievement.points} pts</p>
-                </div>
 
-                <div className="text-right font-semibold">
-                  {isCompleted ? (
-                    <span className="text-green-600">✅ Done</span>
-                  ) : isPending ? (
-                    <span className="text-yellow-600">⌛ Pending</span>
-                  ) : (
-                    <span className="text-red-600">❌ Not Done</span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                  {/* Status Tag */}
+                  <span
+                    className={`mt-1 px-2 py-1 text-xs font-semibold rounded-md w-fit ${
+                      isCompleted
+                        ? "bg-green-200 text-green-800"
+                        : isPending
+                        ? "bg-yellow-200 text-yellow-800"
+                        : "bg-red-200 text-red-800"
+                    }`}
+                  >
+                    {isCompleted ? "✅ Done" : isPending ? "⌛ Pending" : "❌ Not Done"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }
