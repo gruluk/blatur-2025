@@ -107,11 +107,6 @@ export default function Submit() {
 
         <p className="text-xl font-bold mb-4">🏆 Your Total Points: {totalPoints}</p>
 
-        {/* ✅ Show event status */}
-        {!isScavengerHuntLive && (
-          <p className="text-red-500 font-semibold">🚨 The scavenger hunt is not currently live.</p>
-        )}
-
         {/* 🔥 List of Achievements */}
         <div className="w-full max-w-lg space-y-3">
           {achievements.map((achievement) => {
@@ -123,7 +118,7 @@ export default function Submit() {
               <button
                 key={achievement.id}
                 className={`w-full px-6 py-3 font-bold rounded-lg flex justify-between items-center ${
-                  isScavengerHuntLive ? "bg-white text-onlineBlue" : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                  isScavengerHuntLive ? "bg-white text-onlineBlue" : "bg-white text-onlineBlue cursor-not-allowed"
                 }`}
                 onClick={() => isScavengerHuntLive && router.push(`/achievement/${achievement.id}`)}
                 disabled={!isScavengerHuntLive}
