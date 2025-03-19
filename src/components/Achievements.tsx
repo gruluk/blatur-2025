@@ -13,14 +13,20 @@ type Props = {
 export default function Achievements({ achievements, setAchievements }: Props) {
   const [newAchievement, setNewAchievement] = useState<Partial<Achievement>>({
     title: "",
-    description: "",
+    description: "", // ✅ Default to empty string
     points: 0,
   });
 
   async function handleCreateAchievement() {
-    if (!newAchievement.title || !newAchievement.description || !newAchievement.points) return;
+    if (!newAchievement.title || !newAchievement.points) return; // ✅ Remove description check
 
-    const { data, error } = await supabase.from("achievements").insert([newAchievement]).select("*");
+    const { data, error } = await supabase.from("achievements").insert([
+      {
+        title: newAchievement.title,
+        description: newAchievement.description || null, // ✅ If empty, store as NULL
+        points: newAchievement.points,
+      },
+    ]).select("*");
 
     if (error) {
       console.error("❌ Error adding achievement:", error);
@@ -37,32 +43,32 @@ export default function Achievements({ achievements, setAchievements }: Props) {
 
       <div className="w-full space-y-4">
         {achievements.map((achievement) => (
-        <Link key={achievement.id} href={`/judge/achievements/${achievement.id}`} passHref>
-          <div className="p-4 rounded-lg shadow-md bg-white text-onlineBlue w-full cursor-pointer transition hover:bg-gray-100 border border-gray-300 mb-5">
-            <h2 className="text-lg font-bold">{achievement.title}</h2>
-            <p className="text-gray-600">{achievement.description}</p>
-            <p className="text-gray-500">🏆 {achievement.points} Points</p>
-          </div>
-        </Link>
-      ))}
+          <Link key={achievement.id} href={`/judge/achievements/${achievement.id}`} passHref>
+            <div className="p-4 rounded-lg shadow-md bg-white text-onlineBlue w-full cursor-pointer transition hover:bg-gray-100 border border-gray-300 mb-5">
+              <h2 className="text-lg font-bold">{achievement.title}</h2>
+              {achievement.description && <p className="text-gray-600">{achievement.description}</p>} {/* ✅ Only show if it exists */}
+              <p className="text-gray-500">🏆 {achievement.points} Points</p>
+            </div>
+          </Link>
+        ))}
 
         <div className="w-full p-4 bg-white text-onlineBlue rounded-lg shadow-md border border-gray-300">
           <h3 className="text-lg font-bold mb-2">➕ Add New Achievement</h3>
           <Input
-            placeholder="Title"
+            placeholder="Title (Required)"
             value={newAchievement.title}
             onChange={(e) => setNewAchievement({ ...newAchievement, title: e.target.value })}
             className="mb-2"
           />
           <Input
-            placeholder="Description"
+            placeholder="Description (Optional)"
             value={newAchievement.description}
             onChange={(e) => setNewAchievement({ ...newAchievement, description: e.target.value })}
             className="mb-2"
           />
           <Input
             type="number"
-            placeholder="Points"
+            placeholder="Points (Required)"
             value={newAchievement.points}
             onChange={(e) => setNewAchievement({ ...newAchievement, points: Number(e.target.value) })}
             className="mb-3"

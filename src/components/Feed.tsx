@@ -200,6 +200,7 @@ export default function Feed() {
                 {item.video_urls.map((url, index) => (
                   <video
                     key={index}
+                    controls
                     className="rounded-lg max-w-full cursor-pointer"
                     onClick={() => setFullscreenMedia({ url, type: "video" })}
                   >
