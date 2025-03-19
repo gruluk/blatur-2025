@@ -76,7 +76,7 @@ export default function ScavengerPostForm({
       <form onSubmit={handleSubmit} className="space-y-3 mt-2">
         <textarea
           className="w-full p-2 border border-gray-300 rounded-md"
-          placeholder="Write something for your team..."
+          placeholder="Skriv noe gruu til laget..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />

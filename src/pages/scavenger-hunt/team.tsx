@@ -170,7 +170,7 @@ export default function TeamPage() {
   return (
     <div className="p-6 mt-4 flex flex-col items-center w-full max-w-2xl mx-auto space-y-4">
       <Header />
-      <h1 className="text-2xl text-white font-bold mt-15">🏆 Scavenger Hunt - Team Page</h1>
+      <h1 className="text-2xl text-white font-bold mt-15">🏆 Rebus - Lag side</h1>
 
       {isAdmin && teams.length > 1 && (
         <TeamSelector teams={teams} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam} />

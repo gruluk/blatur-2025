@@ -27,10 +27,11 @@ export default function ScavengerHuntCard() {
 
   return (
     <div
-      className="w-full max-w-lg p-4 bg-yellow-500 text-black font-bold rounded-lg text-center cursor-pointer hover:bg-yellow-400"
-      onClick={() => router.push("/scavenger-hunt/team")}
+        className="w-full max-w-lg p-4 bg-white border-yellow-500 border-4 text-black font-bold rounded-lg text-center cursor-pointer hover:bg-yellow-400"
+        onClick={() => router.push("/scavenger-hunt/team")}
     >
-      🏆 The Scavenger Hunt is LIVE! Click here to join your team!
+        <h2 className="text-xl text-onlineBlue">Rebus</h2>
+        <p className="text-sm font-normal text-onlineBlue">Klikk her for å gå til ditt lag</p>
     </div>
   );
 }
