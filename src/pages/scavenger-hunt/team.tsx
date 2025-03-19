@@ -199,110 +199,120 @@ export default function TeamPage() {
 
           {/* 🔥 Judges See Pending Submissions */}
           {isAdmin && (
-            <div className="mt-6">
-              <h3 className="text-lg text-white font-semibold">📷 Pending Submissions</h3>
-              {submissions.length === 0 ? (
-                <p>No submissions yet.</p>
-              ) : (
-                <ul className="space-y-4">
-                  {submissions.map((submission) => {
-                    const task = tasks.find((t) => t.id === submission.task_id); // ✅ Find task by ID
+            <div className="mt-6 w-full max-w-2xl">
+              <h3 className="text-2xl font-semibold text-white mb-4">📷 Pending Submissions</h3>
 
-                    // ✅ Ensure the media URL is correctly formatted
+              {submissions.length === 0 ? (
+                <p className="text-gray-300 text-center">Ingen innleveringer ennå.</p>
+              ) : (
+                <div className="space-y-6">
+                  {submissions.map((submission) => {
+                    const task = tasks.find((t) => t.id === submission.task_id);
                     let mediaUrl = submission.media_url;
                     if (!mediaUrl.startsWith("http")) {
                       mediaUrl = supabase.storage.from("scavenger-feed").getPublicUrl(mediaUrl).data.publicUrl;
                     }
 
-                    return (
-                      <li key={submission.id} className="p-4 bg-white rounded-lg text-black shadow-md">
-                        <h4 className="text-md font-semibold">{task?.title || "Unknown Task"}</h4>
-                        <p className="text-gray-600 text-sm">{task?.description}</p> {/* ✅ Show task description */}
+                    // ✅ Define status styles
+                    const STATUS_MAP = {
+                      pending: { text: "Venter på dommer", color: "bg-yellow-500", icon: "⏳" },
+                      approved: { text: "Godkjent", color: "bg-green-500", icon: "✅" },
+                      rejected: { text: "Avvist", color: "bg-red-500", icon: "🚫" },
+                    };
+                    const { text: statusText, color: statusColor, icon: statusIcon } =
+                      STATUS_MAP[submission.status as keyof typeof STATUS_MAP];
 
-                        {/* 🖼️ Display Image or 🎥 Video Inline */}
-                        {mediaUrl ? (
-                          <div className="mt-3 flex justify-center">
+                    return (
+                      <div key={submission.id} className="bg-white shadow-md rounded-lg p-5 border border-gray-200">
+                        {/* Status Badge */}
+                        <div className={`inline-flex items-center gap-2 px-3 py-1 text-white text-sm font-semibold rounded-full ${statusColor}`}>
+                          <span>{statusIcon}</span>
+                          <span>{statusText}</span>
+                        </div>
+
+                        {/* Task Title */}
+                        <h4 className="mt-3 text-lg font-semibold text-gray-900">{task?.title || "Unknown Task"}</h4>
+                        <p className="text-sm text-gray-600">{task?.description}</p>
+
+                        {/* Media Preview */}
+                        {mediaUrl && (
+                          <div className="mt-4 flex justify-center">
                             {mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
                               <img
-                                key={mediaUrl}
                                 src={mediaUrl}
-                                alt="Submission Media"
-                                className="rounded-lg max-w-full max-h-60"
-                                onError={(e) => console.error("🛑 Image Load Error:", e.currentTarget.src)}
+                                alt="Submission"
+                                className="rounded-lg border border-gray-300 shadow-sm max-w-full max-h-80"
                               />
                             ) : mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                              <video key={mediaUrl} controls className="rounded-lg max-w-full max-h-60">
+                              <video controls className="rounded-lg border border-gray-300 shadow-sm max-w-full max-h-80">
                                 <source src={mediaUrl} type="video/mp4" />
-                                Your browser does not support the video tag.
+                                Din nettleser støtter ikke videoavspilling.
                               </video>
                             ) : (
-                              <p className="text-gray-500">Unsupported media type</p>
+                              <p className="text-gray-500">⚠️ Ugyldig filtype</p>
                             )}
                           </div>
-                        ) : (
-                          <p className="text-gray-500">⚠️ Media not found</p>
                         )}
 
-                        {/* ✅ Status Label */}
-                        <span
-                          className={`block text-center text-sm font-semibold mt-2 px-3 py-1 rounded 
-                          ${submission.status === "pending" ? "bg-yellow-500" : submission.status === "approved" ? "bg-green-500" : "bg-red-500"}`}
-                        >
-                          {submission.status}
-                        </span>
-
-                        {/* ✅ Comment Input for Judges */}
-                        <textarea
-                          className="w-full p-2 mt-2 border rounded bg-gray-900 text-white"
-                          placeholder="Leave a comment (optional)"
-                          value={comments[submission.id] || ""}
-                          onChange={(e) => setComments((prev) => ({ ...prev, [submission.id]: e.target.value }))}
-                        />
-
-                        {/* ✅ Approve/Reject Buttons */}
-                        {isAdmin && submission.status === "pending" && (
-                          <div className="mt-2 flex flex-col space-y-2">
-                            {/* 📝 Points Adjustment */}
-                            <label className="text-sm text-gray-400">Adjust Points:</label>
-                            <input
-                              type="number"
-                              min="0"
-                              defaultValue={task?.points || 0}
-                              className="w-full p-2 border rounded bg-gray-900 text-white"
-                              onChange={(e) => 
-                                setAdjustedPoints((prev) => ({
-                                  ...prev, 
-                                  [submission.id]: Number(e.target.value) || 0, // ✅ Ensure it's always a number
-                                }))
-                              }
+                        {/* ✅ Judge Actions (ONLY for Pending Submissions) */}
+                        {submission.status === "pending" && (
+                          <>
+                            {/* Comment Input */}
+                            <textarea
+                              className="w-full mt-4 p-3 border border-gray-300 rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900"
+                              placeholder="Skriv en kommentar (valgfritt)"
+                              value={comments[submission.id] || ""}
+                              onChange={(e) => setComments((prev) => ({ ...prev, [submission.id]: e.target.value }))}
                             />
 
-                            {/* ✅ Approve/Reject Buttons */}
-                            <div className="mt-2 flex space-x-2">
-                              <button
-                                className="bg-green-500 px-3 py-1 rounded"
-                                onClick={() => handleJudgeAction(
-                                  submission.id, 
-                                  "approved", 
-                                  comments[submission.id] || "", 
-                                  adjustedPoints[submission.id] ?? (task?.points || 0) // ✅ Group properly
-                                )}
-                              >
-                                ✅ Approve
-                              </button>
-                              <button
-                                className="bg-red-500 px-3 py-1 rounded"
-                                onClick={() => handleJudgeAction(submission.id, "rejected", comments[submission.id] || "", 0)}
-                              >
-                                ❌ Reject
-                              </button>
+                            {/* Points & Actions */}
+                            <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                              {/* Points Adjustment */}
+                              <div className="flex items-center space-x-2">
+                                <label className="text-sm text-gray-600">Poeng:</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  defaultValue={task?.points || 0}
+                                  className="w-16 p-2 border border-gray-300 rounded-md bg-gray-100 text-gray-900"
+                                  onChange={(e) =>
+                                    setAdjustedPoints((prev) => ({
+                                      ...prev,
+                                      [submission.id]: Number(e.target.value) || 0,
+                                    }))
+                                  }
+                                />
+                              </div>
+
+                              {/* Approve / Reject Buttons */}
+                              <div className="flex space-x-2">
+                                <button
+                                  className="px-4 py-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600 transition"
+                                  onClick={() =>
+                                    handleJudgeAction(
+                                      submission.id,
+                                      "approved",
+                                      comments[submission.id] || "",
+                                      adjustedPoints[submission.id] ?? (task?.points || 0)
+                                    )
+                                  }
+                                >
+                                  ✅ Godkjenn
+                                </button>
+                                <button
+                                  className="px-4 py-2 bg-red-500 text-white rounded-md shadow-md hover:bg-red-600 transition"
+                                  onClick={() => handleJudgeAction(submission.id, "rejected", comments[submission.id] || "", 0)}
+                                >
+                                  ❌ Avvis
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          </>
                         )}
-                      </li>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </div>
           )}
