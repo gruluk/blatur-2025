@@ -102,18 +102,19 @@ export default function Announcements() {
                   {item.content ? formatPostContent(item.content) : ""}
                 </p>
 
+                {/* 🔥 Announcement Media (Centered) */}
                 {item.image_urls && item.image_urls.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
                     {item.image_urls.map((url, index) => (
-                      <img key={index} src={url} alt="Announcement Image" className="rounded-lg max-w-full" />
+                      <img key={index} src={url} alt="Announcement Image" className="rounded-lg max-w-full max-h-96 object-contain" />
                     ))}
                   </div>
                 )}
 
-                {item.video_urls && (
-                  <div className="mt-2 space-y-2">
+                {item.video_urls && item.video_urls.length > 0 && (
+                  <div className="mt-2 flex flex-col items-center space-y-2">
                     {item.video_urls.map((url, index) => (
-                      <video key={index} controls className="rounded-lg max-w-full">
+                      <video key={index} controls className="rounded-lg max-w-full max-h-96 object-contain">
                         <source src={url} type="video/mp4" />
                         Your browser does not support the video tag.
                       </video>
