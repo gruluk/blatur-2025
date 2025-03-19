@@ -72,8 +72,7 @@ export function TaskSubmissionForm({
       {
         task_id: taskId,
         team_id: selectedTeam.id,
-        image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
-        video_urls: uploadedVideoUrls.length > 0 ? uploadedVideoUrls : [],
+        media_url: uploadedImageUrls[0] || uploadedVideoUrls[0] || null, // ✅ Store the first uploaded media
         status: "pending",
         submitted_at: new Date().toISOString(),
       },
