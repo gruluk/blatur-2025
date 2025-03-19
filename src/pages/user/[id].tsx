@@ -37,7 +37,7 @@ export default function UserProfile() {
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreEntry[]>([]);
   const [isScavengerHuntLive, setIsScavengerHuntLive] = useState(false);
   const [userScavengerTeam, setUserScavengerTeam] = useState<string | null>(null);
-  const [teamScavengerPoints, setTeamScavengerPoints] = useState<number>(0);
+  const [teamScavengerPoints, setTeamScavengerPoints] = useState<number | null>(0);
 
   useEffect(() => {
     if (!id) return;
