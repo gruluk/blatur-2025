@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../supabase";
+import { fetchUserAvatars } from "@/utils/api";
 
 type User = {
   id: string;
@@ -11,6 +12,7 @@ type User = {
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<User[]>([]);
+  const [userAvatars, setUserAvatars] = useState<{ [userId: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -77,6 +79,11 @@ export default function Leaderboard() {
         usersWithScores.sort((a, b) => b.points - a.points);
 
         setUsers(usersWithScores);
+
+        // 🔥 Fetch avatars for users
+        const userIds = usersWithScores.map((user) => user.id);
+        const avatars = await fetchUserAvatars(userIds);
+        setUserAvatars(avatars);
       } catch (error) {
         console.error("❌ Error fetching leaderboard:", error);
       } finally {
@@ -99,14 +106,23 @@ export default function Leaderboard() {
           {users.map((user, index) => (
             <div
               key={user.id}
-              className="bg-white text-onlineBlue p-4 rounded-lg shadow-md cursor-pointer transition hover:bg-gray-200"
+              className="flex items-center bg-white text-onlineBlue p-4 rounded-lg shadow-md cursor-pointer transition hover:bg-gray-200"
               onClick={() => router.push(`/user/${user.id}`)}
             >
-              <p className="font-bold text-lg">
-                {index + 1}. {user.firstName || "Unknown"} {user.lastName || ""}
-              </p>
-              <p className="text-sm text-gray-600">🏆 {user.points} Points</p>
-              <p className="text-xs text-gray-500">Click to view profile</p>
+              {/* Avatar */}
+              <img
+                src={userAvatars[user.id] || "/default-avatar.png"} // Default avatar fallback
+                alt={`${user.firstName || "User"}'s avatar`}
+                className="w-12 h-12 rounded-full border border-gray-300 shadow-sm"
+              />
+
+              <div className="ml-4">
+                <p className="font-bold text-lg">
+                  {index + 1}. {user.firstName || "Unknown"} {user.lastName || ""}
+                </p>
+                <p className="text-sm text-gray-600">🏆 {user.points} Points</p>
+                <p className="text-xs text-gray-500">Click to view profile</p>
+              </div>
             </div>
           ))}
         </div>
