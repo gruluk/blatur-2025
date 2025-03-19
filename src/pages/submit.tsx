@@ -95,13 +95,13 @@ export default function Submit() {
     fetchScavengerHuntStatus(); // ✅ Check scavenger hunt event status
   }, [user]);
 
-  return (
+    return (
     <div className="min-h-screen bg-onlineBlue text-white p-6 mt-15">
       <Header />
       <div className="min-h-screen text-white flex flex-col items-center">
 
-        {/* ✅ Use Scavenger Hunt Card */}
-        <ScavengerHuntCard />
+        {/* ✅ Show Scavenger Hunt Card only if live */}
+        {isScavengerHuntLive && <ScavengerHuntCard />}
 
         <h1 className="text-3xl font-bold mt-6 mb-4">Achievements</h1>
 
@@ -117,11 +117,8 @@ export default function Submit() {
             return (
               <button
                 key={achievement.id}
-                className={`w-full px-6 py-3 font-bold rounded-lg flex justify-between items-center ${
-                  isScavengerHuntLive ? "bg-white text-onlineBlue" : "bg-white text-onlineBlue cursor-not-allowed"
-                }`}
-                onClick={() => isScavengerHuntLive && router.push(`/achievement/${achievement.id}`)}
-                disabled={!isScavengerHuntLive}
+                className="w-full px-6 py-3 font-bold bg-white text-onlineBlue rounded-lg flex justify-between items-center"
+                onClick={() => router.push(`/achievement/${achievement.id}`)} // ✅ Always clickable
               >
                 <div className="text-left">
                   <p>{achievement.title}</p>
